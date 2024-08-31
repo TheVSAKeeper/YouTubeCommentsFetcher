@@ -1,0 +1,69 @@
+@model YouTubeCommentsViewModel
+
+@{
+    ViewData["Title"] = "YouTube Comments";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<h2>Comments:</h2>
+<ul>
+    @foreach (Comment comment in Model.Comments)
+    {
+        <li>
+            <strong>@comment.AuthorDisplayName:</strong> @comment.TextDisplay
+        </li>
+
+        if (comment.Replies.Any() == false)
+        {
+            continue;
+        }
+
+        <ul>
+            @foreach (Comment reply in comment.Replies)
+            {
+                <li>
+                    <strong>@reply.AuthorDisplayName:</strong> @reply.TextDisplay
+                    <small>
+                        Published at:@($"{reply.PublishedAt:yyyy-MM-dd HH:mm:ss}")
+                    </small>
+                </li>
+            }
+        </ul>
+    }
+</ul>
+
+@foreach (VideoComments video in Model.Videos)
+{
+    <h2>Video Title: <a href="@video.VideoUrl" target="_blank">@video.VideoTitle</a></h2>
+    <h3>Comments:</h3>
+    <ul>
+        @foreach (Comment comment in video.Comments)
+        {
+            <li>
+                <strong>@comment.AuthorDisplayName:</strong> @comment.TextDisplay
+                <small>
+                    Published at:@($"{comment.PublishedAt:yyyy-MM-dd HH:mm:ss}")
+                </small>
+            </li>
+
+            if (comment.Replies.Any() == false)
+            {
+                continue;
+            }
+
+            <ul>
+                @foreach (Comment reply in comment.Replies)
+                {
+                    <li>
+                        <strong>@reply.AuthorDisplayName:</strong> @reply.TextDisplay
+                        <small>
+                            Published at:@($"{reply.PublishedAt:yyyy-MM-dd HH:mm:ss}")
+                        </small>
+                    </li>
+                }
+            </ul>
+        }
+    </ul>
+    <hr>
+}

@@ -1,0 +1,58 @@
+﻿@model YouTubeCommentsViewModel
+
+@{
+    ViewData["Title"] = "YouTube Comments Fetcher";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="text-center">
+    <h1 class="display-4">YouTube Comments Fetcher</h1>
+    <form asp-action="FetchComments" method="post">
+        <div class="form-group">
+            <label for="channelId">Channel ID:</label>
+            <input type="text" id="channelId" name="channelId" class="form-control" />
+        </div>
+        <div class="form-group">
+            <label for="pageSize">Page Size:</label>
+            <input type="number" id="pageSize" name="pageSize" class="form-control" value="5" />
+        </div>
+        <div class="form-group">
+            <label for="maxPages">Max Pages:</label>
+            <input type="number" id="maxPages" name="maxPages" class="form-control" value="1" />
+        </div>
+        <button type="submit" class="btn btn-primary">Fetch Comments</button>
+    </form>
+</div>
+
+@if (Model.Videos.Any())
+{
+    foreach (VideoComments video in Model.Videos)
+    {
+        <h2>Video Title: <a href="@video.VideoUrl" target="_blank">@video.VideoTitle</a></h2>
+        <h3>Comments:</h3>
+        <ul>
+            @foreach (Comment comment in video.Comments)
+            {
+                <li>
+                    <strong>@comment.AuthorDisplayName:</strong> @comment.TextDisplay
+                </li>
+
+                if (comment.Replies.Any() == false)
+                {
+                    continue;
+                }
+
+                <ul>
+                    @foreach (Comment reply in comment.Replies)
+                    {
+                        <li>
+                            <strong>@reply.AuthorDisplayName:</strong> @reply.TextDisplay
+                        </li>
+                    }
+                </ul>
+            }
+        </ul>
+        <hr>
+    }
+}
