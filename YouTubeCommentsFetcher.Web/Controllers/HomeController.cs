@@ -15,7 +15,7 @@ public class HomeController(ILogger<HomeController> logger, YouTubeService youtu
     }
 
     [HttpPost]
-    public async Task<IActionResult> FetchComments(string channelId, int pageSize = 5, int maxPages = 1)
+    public async Task<IActionResult> FetchComments(string channelId, int pageSize = 5, int maxPages = 1, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(channelId))
         {
@@ -23,84 +23,25 @@ public class HomeController(ILogger<HomeController> logger, YouTubeService youtu
             return View("Index", new YouTubeCommentsViewModel());
         }
 
-        ChannelsResource.ListRequest? channelRequest = youtubeService.Channels.List("contentDetails");
-        channelRequest.Id = channelId;
-        ChannelListResponse? channelResponse = await channelRequest.ExecuteAsync();
+        string? uploadsPlaylistId = await GetUploadsPlaylistId(channelId, cancellationToken);
 
-        string? uploadsPlaylistId = channelResponse.Items[0].ContentDetails.RelatedPlaylists.Uploads;
-
-        List<string> videoIds = [];
-        string? nextPageToken = null;
-        int page = 0;
-
-        do
+        if (uploadsPlaylistId == null)
         {
-            PlaylistItemsResource.ListRequest? playlistRequest = youtubeService.PlaylistItems.List("contentDetails,snippet");
-            playlistRequest.PlaylistId = uploadsPlaylistId;
-            playlistRequest.MaxResults = pageSize;
-            playlistRequest.PageToken = nextPageToken;
-
-            PlaylistItemListResponse? playlistResponse = await playlistRequest.ExecuteAsync();
-            videoIds.AddRange(playlistResponse.Items.Select(item => item.ContentDetails.VideoId));
-            nextPageToken = playlistResponse.NextPageToken;
-            page++;
-
-            logger.LogInformation("Page {Page} of {ItemsCount}: {NextPageToken}", page, channelResponse.Items.Count, nextPageToken);
-
-            if (page >= maxPages)
-            {
-                break;
-            }
-        } while (nextPageToken != null);
-
-        YouTubeCommentsViewModel model = new();
-
-        foreach (string videoId in videoIds)
-        {
-            VideosResource.ListRequest? videoRequest = youtubeService.Videos.List("snippet");
-            videoRequest.Id = videoId;
-            VideoListResponse? videoResponse = await videoRequest.ExecuteAsync();
-            string? videoTitle = videoResponse.Items[0].Snippet.Title;
-            logger.LogInformation("Video {VideoId}: {VideoTitle}", videoId, videoTitle);
-            string videoUrl = $"https://www.youtube.com/watch?v={videoId}";
-
-            CommentThreadsResource.ListRequest? commentsRequest = youtubeService.CommentThreads.List("snippet,replies");
-            commentsRequest.VideoId = videoId;
-            commentsRequest.MaxResults = 100;
-
-            CommentThreadListResponse? commentsResponse = await commentsRequest.ExecuteAsync();
-
-            VideoComments videoComments = new()
-            {
-                VideoTitle = videoTitle,
-                VideoUrl = videoUrl,
-                Comments = commentsResponse.Items.Select(commentThread => new Comment
-                    {
-                        AuthorDisplayName = commentThread.Snippet.TopLevelComment.Snippet.AuthorDisplayName,
-                        TextDisplay = commentThread.Snippet.TopLevelComment.Snippet.TextDisplay,
-                        PublishedAt = commentThread.Snippet.TopLevelComment.Snippet.PublishedAt,
-                        Replies = commentThread.Replies?.Comments?.Select(reply => new Comment
-                                      {
-                                          AuthorDisplayName = reply.Snippet.AuthorDisplayName,
-                                          TextDisplay = reply.Snippet.TextDisplay,
-                                          PublishedAt = reply.Snippet.PublishedAt
-                                      })
-                                      .ToList()
-                                  ?? []
-                    })
-                    .ToList()
-            };
-
-            model.Videos.Add(videoComments);
+            ModelState.AddModelError("channelId", "Channel not found or no uploads.");
+            return View("Index", new YouTubeCommentsViewModel());
         }
 
-        List<Comment> allComments = model.Videos.SelectMany(video => video.Comments).OrderByDescending(comment => comment.PublishedAt).ToList();
-        model.Comments = allComments;
+        List<string> videoIds = await GetVideoIdsFromPlaylist(uploadsPlaylistId, pageSize, maxPages, cancellationToken);
 
-        foreach (VideoComments video in model.Videos)
+        YouTubeCommentsViewModel model = new()
         {
-            video.Comments = allComments.Where(comment => video.Comments.Any(c => c.TextDisplay == comment.TextDisplay)).ToList();
-        }
+            Videos = await GetVideoComments(videoIds, cancellationToken)
+        };
+
+        model.Comments = model.Videos
+            .SelectMany(video => video.Comments)
+            .OrderByDescending(comment => comment.PublishedAt)
+            .ToList();
 
         return View("Comments", model);
     }
@@ -113,6 +54,96 @@ public class HomeController(ILogger<HomeController> logger, YouTubeService youtu
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        return View(new ErrorViewModel
+        {
+            RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+        });
+    }
+
+    private async Task<string?> GetUploadsPlaylistId(string channelId, CancellationToken cancellationToken = default)
+    {
+        ChannelsResource.ListRequest? channelRequest = youtubeService.Channels.List("contentDetails");
+        channelRequest.Id = channelId;
+        ChannelListResponse? channelResponse = await channelRequest.ExecuteAsync(cancellationToken);
+        return channelResponse?.Items.FirstOrDefault()?.ContentDetails?.RelatedPlaylists?.Uploads;
+    }
+
+    private async Task<List<string>> GetVideoIdsFromPlaylist(string uploadsPlaylistId, int pageSize, int maxPages, CancellationToken cancellationToken = default)
+    {
+        List<string> videoIds = [];
+        string? nextPageToken = null;
+        int page = 0;
+
+        do
+        {
+            PlaylistItemsResource.ListRequest? playlistRequest = youtubeService.PlaylistItems.List("contentDetails,snippet");
+            playlistRequest.PlaylistId = uploadsPlaylistId;
+            playlistRequest.MaxResults = pageSize;
+            playlistRequest.PageToken = nextPageToken;
+
+            PlaylistItemListResponse? playlistResponse = await playlistRequest.ExecuteAsync(cancellationToken);
+            videoIds.AddRange(playlistResponse.Items.Select(item => item.ContentDetails.VideoId));
+            nextPageToken = playlistResponse.NextPageToken;
+            page++;
+
+            logger.LogInformation("Page {Page} of {ItemsCount}: {NextPageToken}", page, playlistResponse.Items.Count, nextPageToken);
+        } while (nextPageToken != null && page < maxPages);
+
+        return videoIds;
+    }
+
+    private async Task<List<VideoComments>> GetVideoComments(List<string> videoIds, CancellationToken cancellationToken = default)
+    {
+        List<VideoComments> videos = [];
+
+        foreach (string videoId in videoIds)
+        {
+            string? videoTitle = await GetVideoTitle(videoId, cancellationToken);
+            string videoUrl = $"https://www.youtube.com/watch?v={videoId}";
+
+            List<Comment> comments = await GetCommentsForVideo(videoId, cancellationToken);
+
+            videos.Add(new VideoComments
+            {
+                VideoTitle = videoTitle ?? "Not found",
+                VideoUrl = videoUrl,
+                Comments = comments
+            });
+        }
+
+        return videos;
+    }
+
+    private async Task<string?> GetVideoTitle(string videoId, CancellationToken cancellationToken = default)
+    {
+        VideosResource.ListRequest? videoRequest = youtubeService.Videos.List("snippet");
+        videoRequest.Id = videoId;
+        VideoListResponse? videoResponse = await videoRequest.ExecuteAsync(cancellationToken);
+        return videoResponse?.Items.FirstOrDefault()?.Snippet?.Title;
+    }
+
+    private async Task<List<Comment>> GetCommentsForVideo(string videoId, CancellationToken cancellationToken = default)
+    {
+        CommentThreadsResource.ListRequest? commentsRequest = youtubeService.CommentThreads.List("snippet,replies");
+        commentsRequest.VideoId = videoId;
+        commentsRequest.MaxResults = 100;
+
+        CommentThreadListResponse? commentsResponse = await commentsRequest.ExecuteAsync(cancellationToken);
+
+        return commentsResponse.Items.Select(commentThread => new Comment
+            {
+                AuthorDisplayName = commentThread.Snippet.TopLevelComment.Snippet.AuthorDisplayName,
+                TextDisplay = commentThread.Snippet.TopLevelComment.Snippet.TextDisplay,
+                PublishedAt = commentThread.Snippet.TopLevelComment.Snippet.PublishedAt,
+                Replies = commentThread.Replies?.Comments?.Select(reply => new Comment
+                              {
+                                  AuthorDisplayName = reply.Snippet.AuthorDisplayName,
+                                  TextDisplay = reply.Snippet.TextDisplay,
+                                  PublishedAt = reply.Snippet.PublishedAt
+                              })
+                              .ToList()
+                          ?? []
+            })
+            .ToList();
     }
 }
