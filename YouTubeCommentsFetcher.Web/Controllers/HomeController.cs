@@ -1,14 +1,14 @@
-using Google.Apis.YouTube.v3;
-using Google.Apis.YouTube.v3.Data;
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using YouTubeCommentsFetcher.Web.Models;
-using Activity = System.Diagnostics.Activity;
-using Comment = YouTubeCommentsFetcher.Web.Models.Comment;
+using YouTubeCommentsFetcher.Web.Services;
 
 namespace YouTubeCommentsFetcher.Web.Controllers;
 
-public class HomeController(ILogger<HomeController> logger, YouTubeService youtubeService) : Controller
+public class HomeController(ILogger<HomeController> logger, IYouTubeService youTubeService) : Controller
 {
+    private readonly ILogger<HomeController> _logger = logger;
+
     public IActionResult Index()
     {
         return View(new YouTubeCommentsViewModel());
@@ -23,7 +23,7 @@ public class HomeController(ILogger<HomeController> logger, YouTubeService youtu
             return View("Index", new YouTubeCommentsViewModel());
         }
 
-        string? uploadsPlaylistId = await GetUploadsPlaylistId(channelId, cancellationToken);
+        string? uploadsPlaylistId = await youTubeService.GetUploadsPlaylistIdAsync(channelId, cancellationToken);
 
         if (uploadsPlaylistId == null)
         {
@@ -31,12 +31,18 @@ public class HomeController(ILogger<HomeController> logger, YouTubeService youtu
             return View("Index", new YouTubeCommentsViewModel());
         }
 
-        List<string> videoIds = await GetVideoIdsFromPlaylist(uploadsPlaylistId, pageSize, maxPages, cancellationToken);
+        List<string> videoIds = await youTubeService.GetVideoIdsFromPlaylistAsync(uploadsPlaylistId, pageSize, maxPages, cancellationToken);
 
         YouTubeCommentsViewModel model = new()
         {
-            Videos = await GetVideoComments(videoIds, cancellationToken)
+            Videos = []
         };
+
+        foreach (string videoId in videoIds)
+        {
+            VideoComments videoComments = await youTubeService.GetVideoCommentsAsync(videoId, cancellationToken);
+            model.Videos.Add(videoComments);
+        }
 
         model.Comments = model.Videos
             .SelectMany(video => video.Comments)
@@ -58,92 +64,5 @@ public class HomeController(ILogger<HomeController> logger, YouTubeService youtu
         {
             RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
         });
-    }
-
-    private async Task<string?> GetUploadsPlaylistId(string channelId, CancellationToken cancellationToken = default)
-    {
-        ChannelsResource.ListRequest? channelRequest = youtubeService.Channels.List("contentDetails");
-        channelRequest.Id = channelId;
-        ChannelListResponse? channelResponse = await channelRequest.ExecuteAsync(cancellationToken);
-        return channelResponse?.Items.FirstOrDefault()?.ContentDetails?.RelatedPlaylists?.Uploads;
-    }
-
-    private async Task<List<string>> GetVideoIdsFromPlaylist(string uploadsPlaylistId, int pageSize, int maxPages, CancellationToken cancellationToken = default)
-    {
-        List<string> videoIds = [];
-        string? nextPageToken = null;
-        int page = 0;
-
-        do
-        {
-            PlaylistItemsResource.ListRequest? playlistRequest = youtubeService.PlaylistItems.List("contentDetails,snippet");
-            playlistRequest.PlaylistId = uploadsPlaylistId;
-            playlistRequest.MaxResults = pageSize;
-            playlistRequest.PageToken = nextPageToken;
-
-            PlaylistItemListResponse? playlistResponse = await playlistRequest.ExecuteAsync(cancellationToken);
-            videoIds.AddRange(playlistResponse.Items.Select(item => item.ContentDetails.VideoId));
-            nextPageToken = playlistResponse.NextPageToken;
-            page++;
-
-            logger.LogInformation("Page {Page} of {ItemsCount}: {NextPageToken}", page, playlistResponse.Items.Count, nextPageToken);
-        } while (nextPageToken != null && page < maxPages);
-
-        return videoIds;
-    }
-
-    private async Task<List<VideoComments>> GetVideoComments(List<string> videoIds, CancellationToken cancellationToken = default)
-    {
-        List<VideoComments> videos = [];
-
-        foreach (string videoId in videoIds)
-        {
-            string? videoTitle = await GetVideoTitle(videoId, cancellationToken);
-            string videoUrl = $"https://www.youtube.com/watch?v={videoId}";
-
-            List<Comment> comments = await GetCommentsForVideo(videoId, cancellationToken);
-
-            videos.Add(new VideoComments
-            {
-                VideoTitle = videoTitle ?? "Not found",
-                VideoUrl = videoUrl,
-                Comments = comments
-            });
-        }
-
-        return videos;
-    }
-
-    private async Task<string?> GetVideoTitle(string videoId, CancellationToken cancellationToken = default)
-    {
-        VideosResource.ListRequest? videoRequest = youtubeService.Videos.List("snippet");
-        videoRequest.Id = videoId;
-        VideoListResponse? videoResponse = await videoRequest.ExecuteAsync(cancellationToken);
-        return videoResponse?.Items.FirstOrDefault()?.Snippet?.Title;
-    }
-
-    private async Task<List<Comment>> GetCommentsForVideo(string videoId, CancellationToken cancellationToken = default)
-    {
-        CommentThreadsResource.ListRequest? commentsRequest = youtubeService.CommentThreads.List("snippet,replies");
-        commentsRequest.VideoId = videoId;
-        commentsRequest.MaxResults = 100;
-
-        CommentThreadListResponse? commentsResponse = await commentsRequest.ExecuteAsync(cancellationToken);
-
-        return commentsResponse.Items.Select(commentThread => new Comment
-            {
-                AuthorDisplayName = commentThread.Snippet.TopLevelComment.Snippet.AuthorDisplayName,
-                TextDisplay = commentThread.Snippet.TopLevelComment.Snippet.TextDisplay,
-                PublishedAt = commentThread.Snippet.TopLevelComment.Snippet.PublishedAt,
-                Replies = commentThread.Replies?.Comments?.Select(reply => new Comment
-                              {
-                                  AuthorDisplayName = reply.Snippet.AuthorDisplayName,
-                                  TextDisplay = reply.Snippet.TextDisplay,
-                                  PublishedAt = reply.Snippet.PublishedAt
-                              })
-                              .ToList()
-                          ?? []
-            })
-            .ToList();
     }
 }

@@ -1,15 +1,18 @@
 using Google.Apis.Services;
-using Google.Apis.YouTube.v3;
+using YouTubeCommentsFetcher.Web.Services;
+using YouTubeService = Google.Apis.YouTube.v3.YouTubeService;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddSingleton<YouTubeService>(_ => new YouTubeService(new BaseClientService.Initializer
+builder.Services.AddScoped<YouTubeService>(_ => new YouTubeService(new BaseClientService.Initializer
 {
     ApiKey = builder.Configuration["YouTubeApiKey"],
     ApplicationName = "YouTubeCommentsFetcher"
 }));
+
+builder.Services.AddScoped<IYouTubeService, YouTubeCommentsFetcher.Web.Services.YouTubeService>();
 
 WebApplication app = builder.Build();
 
