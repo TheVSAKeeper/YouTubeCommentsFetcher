@@ -1,37 +1,62 @@
 using Google.Apis.Services;
+using Serilog;
+using Serilog.Events;
 using YouTubeCommentsFetcher.Web.Services;
 using YouTubeService = Google.Apis.YouTube.v3.YouTubeService;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .MinimumLevel.Override("Microsoft.AspNetCore.Hosting", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Mvc", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Routing", LogEventLevel.Warning)
+    .CreateLogger();
 
-builder.Services.AddControllersWithViews();
-
-builder.Services.AddScoped<YouTubeService>(_ => new YouTubeService(new BaseClientService.Initializer
+try
 {
-    ApiKey = builder.Configuration["YouTubeApiKey"],
-    ApplicationName = "YouTubeCommentsFetcher"
-}));
+    Log.Information("Starting web application");
 
-builder.Services.AddScoped<IYouTubeService, YouTubeCommentsFetcher.Web.Services.YouTubeService>();
+    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+    builder.Services.AddSerilog();
 
-WebApplication app = builder.Build();
+    builder.Services.AddControllersWithViews();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
+    builder.Services.AddScoped<YouTubeService>(_ => new YouTubeService(new BaseClientService.Initializer
+    {
+        ApiKey = builder.Configuration["YouTubeApiKey"],
+        ApplicationName = "YouTubeCommentsFetcher",
+    }));
+
+    builder.Services.AddScoped<IYouTubeService, YouTubeCommentsFetcher.Web.Services.YouTubeService>();
+
+    WebApplication app = builder.Build();
+
+    app.UseSerilogRequestLogging();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage();
+    }
+    else
+    {
+        app.UseExceptionHandler("/Home/Error");
+        app.UseHsts();
+    }
+
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
+
+    app.UseRouting();
+
+    app.UseAuthorization();
+
+    app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
+    app.Run();
 }
-else
+catch (Exception ex)
 {
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
+    Log.Fatal(ex, "Application terminated unexpectedly");
 }
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.UseAuthorization();
-
-app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
-app.Run();
+finally
+{
+    Log.CloseAndFlush();
+}
