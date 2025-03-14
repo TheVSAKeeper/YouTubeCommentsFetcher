@@ -6,4 +6,5 @@ public class Comment
     public required string TextDisplay { get; init; }
     public required DateTime? PublishedAt { get; init; }
     public List<Comment> Replies { get; init; } = [];
+    public long? LikeCount { get; init; }
 }

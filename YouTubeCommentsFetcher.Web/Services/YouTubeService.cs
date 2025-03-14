@@ -113,6 +113,7 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
                                       AuthorDisplayName = reply.Snippet.AuthorDisplayName,
                                       TextDisplay = reply.Snippet.TextDisplay,
                                       PublishedAt = reply.Snippet.PublishedAt,
+                                      LikeCount = reply.Snippet.LikeCount,
                                   })
                                   .ToList()
                               ?? [],
@@ -125,7 +126,9 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
             {
                 VideoTitle = videoTitle,
                 VideoUrl = videoUrl,
+                ThumbnailUrl = $"https://img.youtube.com/vi/{videoId}/hqdefault.jpg",
                 Comments = comments,
+                VideoId = videoId,
             };
         }
         catch (Exception ex)
@@ -136,7 +139,9 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
             {
                 VideoTitle = null,
                 VideoUrl = null,
+                ThumbnailUrl = null,
                 Comments = [],
+                VideoId = null,
             };
         }
     }
