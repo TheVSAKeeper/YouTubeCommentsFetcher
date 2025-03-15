@@ -8,10 +8,10 @@ public class CommentStatistics
     public DateTime? OldestCommentDate { get; init; }
     public DateTime? NewestCommentDate { get; init; }
 
-    public List<TopAuthor> TopAuthorsByComments { get; set; } = [];
-    public List<TopComment> TopCommentsByReplies { get; set; } = [];
-    public List<TopComment> TopCommentsByLikes { get; set; } = [];
-    public List<string> MostUsedWords { get; set; } = [];
+    public Top<TopAuthor> TopAuthorsByComments => CommentAnalysis.TopAuthors;
+    public List<TopComment> TopCommentsByReplies => CommentAnalysis.TopCommentsByReplies;
+    public List<TopComment> TopCommentsByLikes=> CommentAnalysis.TopCommentsByLikes;
+    public Top<TopWord> MostUsedWords => CommentAnalysis.MostUsedWords;
 
     public List<TopVideo> TopCommentedVideos { get; set; } = [];
     public List<TopVideo> TopLikedCommentsVideos { get; set; } = [];
@@ -19,4 +19,6 @@ public class CommentStatistics
 
     public List<TopVideo> TopInteractiveVideos { get; set; } = [];
     public int TotalReplies { get; set; }
+
+    public CommentAnalysisResult CommentAnalysis { get; set; }
 }

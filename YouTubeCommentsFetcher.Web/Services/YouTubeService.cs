@@ -96,6 +96,7 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
             commentsRequest.MaxResults = 100;
 
             logger.LogInformation("Отправка запроса на получение комментариев для видео с ID: {VideoId}", videoId);
+
             CommentThreadListResponse commentsResponse = await commentsRequest.ExecuteAsync(cancellationToken);
 
             if (commentsResponse.Items.Count == 0)
@@ -107,6 +108,7 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
                 {
                     AuthorDisplayName = commentThread.Snippet.TopLevelComment.Snippet.AuthorDisplayName,
                     TextDisplay = commentThread.Snippet.TopLevelComment.Snippet.TextDisplay,
+                    LikeCount = commentThread.Snippet.TopLevelComment.Snippet.LikeCount,
                     PublishedAt = commentThread.Snippet.TopLevelComment.Snippet.PublishedAt,
                     Replies = commentThread.Replies?.Comments?.Select(reply => new Comment
                                   {
@@ -116,7 +118,7 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
                                       LikeCount = reply.Snippet.LikeCount,
                                   })
                                   .ToList()
-                              ?? [],
+                              ?? []
                 })
                 .ToList();
 

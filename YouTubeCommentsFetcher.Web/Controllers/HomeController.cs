@@ -10,7 +10,7 @@ namespace YouTubeCommentsFetcher.Web.Controllers;
 
 public class HomeController(ILogger<HomeController> logger, IYouTubeService youTubeService) : Controller
 {
-    private int _count =5;
+    private const int Count = 3;
 
     public IActionResult Index()
     {
@@ -59,34 +59,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
             .OrderByDescending(comment => comment.PublishedAt)
             .ToList();
 
-        if (model.Comments.Any())
-        {
-            model.Statistics = new CommentStatistics
-            {
-                TotalComments = model.Comments.Count,
-                UniqueAuthors = model.Comments.Select(c => c.AuthorDisplayName).Distinct().Count(),
-                AverageCommentsPerVideo = model.Videos.Count > 0
-                    ? Math.Round((double)model.Comments.Count / model.Videos.Count, 2)
-                    : 0,
-                OldestCommentDate = model.Comments.Min(c => c.PublishedAt),
-                NewestCommentDate = model.Comments.Max(c => c.PublishedAt),
-            };
-
-            CommentAnalysisResult analysis = AnalyzeComments(model.Comments);
-
-            model.Statistics.TopAuthorsByComments = analysis.TopAuthors;
-            model.Statistics.TopCommentsByReplies = analysis.TopCommentsByReplies;
-            model.Statistics.TopCommentsByLikes = analysis.TopCommentsByLikes;
-            model.Statistics.MostUsedWords = analysis.MostUsedWords;
-
-            VideoAnalysisResult videoAnalysis = AnalyzeVideos(model.Videos);
-
-            model.Statistics.TopCommentedVideos = videoAnalysis.TopCommentedVideos;
-            model.Statistics.TopLikedCommentsVideos = videoAnalysis.TopLikedCommentsVideos;
-            model.Statistics.TopRepliedVideos = videoAnalysis.TopRepliedVideos;
-            model.Statistics.TopInteractiveVideos = videoAnalysis.TopInteractiveVideos;
-            model.Statistics.TotalReplies = model.Videos.Sum(v => v.Comments.Sum(c => c.Replies.Count));
-        }
+        model.Statistics = Analyze(model.Comments, model.Videos);
 
         logger.LogInformation("Получено {CommentCount} комментариев из {VideoCount} видео", model.Comments.Count, model.Videos.Count);
         return View("Comments", model);
@@ -152,9 +125,9 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
             return View("Index");
         }
 
-        if (Path.GetExtension(jsonFile.FileName).ToLower() != ".json")
+        if (!Path.GetExtension(jsonFile.FileName).Equals(".json", StringComparison.InvariantCultureIgnoreCase))
         {
-            logger.LogWarning($"Неправильный формат файла: {jsonFile.FileName}");
+            logger.LogWarning("Неправильный формат файла: {FileName}", jsonFile.FileName);
             TempData["Error"] = "Поддерживаются только JSON-файлы";
             return View("Index");
         }
@@ -166,8 +139,9 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
             string json = Encoding.UTF8.GetString(stream.ToArray());
 
             YouTubeCommentsViewModel? model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
+            model.Statistics = Analyze(model.Comments, model.Videos);
 
-            logger.LogInformation($"Успешно загружен файл: {jsonFile.FileName}");
+            logger.LogInformation("Успешно загружен файл: {FileName}", jsonFile.FileName);
 
             return View("Comments", model);
         }
@@ -185,11 +159,37 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
         }
     }
 
+    private CommentStatistics Analyze(List<Comment> comments, List<VideoComments> videos)
+    {
+        CommentStatistics statistics = new()
+        {
+            TotalComments = comments.Count,
+            UniqueAuthors = comments.Select(c => c.AuthorDisplayName).Distinct().Count(),
+            AverageCommentsPerVideo = videos.Count > 0
+                ? Math.Round((double)comments.Count / videos.Count, 2)
+                : 0,
+            OldestCommentDate = comments.Min(c => c.PublishedAt),
+            NewestCommentDate = comments.Max(c => c.PublishedAt),
+            CommentAnalysis = AnalyzeComments(comments),
+        };
+
+        VideoAnalysisResult videoAnalysis = AnalyzeVideos(videos);
+
+        statistics.TopCommentedVideos = videoAnalysis.TopCommentedVideos;
+        statistics.TopLikedCommentsVideos = videoAnalysis.TopLikedCommentsVideos;
+        statistics.TopRepliedVideos = videoAnalysis.TopRepliedVideos;
+        statistics.TopInteractiveVideos = videoAnalysis.TopInteractiveVideos;
+        statistics.TotalReplies = videos.Sum(v => v.Comments.Sum(c => c.Replies.Count));
+
+        return statistics;
+    }
+
     private VideoAnalysisResult AnalyzeVideos(List<VideoComments> videos)
     {
         VideoAnalysisResult analysis = new()
         {
             TopCommentedVideos = videos
+                .Where(x=>x.Comments.Count > 0)
                 .Select(v => new TopVideo
                 {
                     VideoTitle = v.VideoTitle,
@@ -198,9 +198,10 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     ThumbnailUrl = v.ThumbnailUrl,
                 })
                 .OrderByDescending(v => v.CommentsCount)
-                .Take(_count)
+                .Take(Count)
                 .ToList(),
             TopLikedCommentsVideos = videos
+                .Where(x=>x.Comments.Count > 0)
                 .Select(v => new TopVideo
                 {
                     VideoTitle = v.VideoTitle,
@@ -209,9 +210,10 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     ThumbnailUrl = v.ThumbnailUrl,
                 })
                 .OrderByDescending(v => v.CommentsCount)
-                .Take(_count)
+                .Take(Count)
                 .ToList(),
             TopRepliedVideos = videos
+                .Where(x=>x.Comments.Count > 0)
                 .Select(v => new TopVideo
                 {
                     VideoTitle = v.VideoTitle,
@@ -220,9 +222,10 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     ThumbnailUrl = v.ThumbnailUrl,
                 })
                 .OrderByDescending(v => v.CommentsCount)
-                .Take(_count)
+                .Take(Count)
                 .ToList(),
             TopInteractiveVideos = videos
+                .Where(x=>x.Comments.Count > 0)
                 .Select(v => new TopVideo
                 {
                     VideoTitle = v.VideoTitle,
@@ -233,7 +236,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     ThumbnailUrl = v.ThumbnailUrl,
                 })
                 .OrderByDescending(v => v.TotalInteractions)
-                .Take(_count)
+                .Take(Count)
                 .ToList(),
         };
 
@@ -242,22 +245,28 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
 
     private CommentAnalysisResult AnalyzeComments(List<Comment> comments)
     {
+        Top<TopWord> worldTop = new()
+        {
+            ByComments = TopWords(comments),
+            ByReplies = TopWords(comments.SelectMany(x => x.Replies)),
+            ByActivity = TopWords(comments.SelectMany(x => x.Replies.Append(x))),
+        };
+
+        Top<TopAuthor> authorTop = new()
+        {
+            ByComments = TopAuthors(comments),
+            ByReplies = TopAuthors(comments.SelectMany(x => x.Replies)),
+            ByActivity = TopAuthors(comments.SelectMany(x => x.Replies.Append(x))),
+        };
+
+
         CommentAnalysisResult analysis = new()
         {
-            TopAuthors = comments
-                .GroupBy(c => c.AuthorDisplayName)
-                .Select(g => new TopAuthor
-                {
-                    AuthorName = g.First().AuthorDisplayName,
-                    CommentsCount = g.Count(),
-                })
-                .OrderByDescending(a => a.CommentsCount)
-                .Take(_count)
-                .ToList(),
+            TopAuthors = authorTop,
             TopCommentsByReplies = comments
                 .Where(c => c.Replies.Count > 0)
                 .OrderByDescending(c => c.Replies.Count)
-                .Take(_count)
+                .Take(Count)
                 .Select(c => new TopComment
                 {
                     CommentText = c.TextDisplay,
@@ -268,7 +277,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
             TopCommentsByLikes = comments
                 .Where(c => c.LikeCount is > 0)
                 .OrderByDescending(c => c.LikeCount)
-                .Take(_count)
+                .Take(Count)
                 .Select(c => new TopComment
                 {
                     CommentText = c.TextDisplay,
@@ -276,19 +285,40 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     Author = c.AuthorDisplayName,
                 })
                 .ToList(),
+            MostUsedWords = worldTop,
         };
 
-        List<string> words = comments
-            .SelectMany(c => c.TextDisplay.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Where(word => word.Length > 3)
-            .GroupBy(word => word.ToLower())
-            .OrderByDescending(g => g.Count())
-            .Take(20)
-            .Select(g => g.Key)
-            .ToList();
-
-        analysis.MostUsedWords = words;
-
         return analysis;
+
+        List<TopWord> TopWords(IEnumerable<Comment> all)
+        {
+            List<TopWord> topWords = all
+                .SelectMany(c => c.TextDisplay.Split([" ", "<br>"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Select(x => x.Trim(',', '.', ';', '-', '!', '?', '(', ')'))
+                .Where(word => word.Length > 3 && !word.Contains("href", StringComparison.InvariantCultureIgnoreCase))
+                .GroupBy(word => word.ToLowerInvariant())
+                .Select(g => new TopWord(g.Key, g.Count()))
+                .OrderByDescending(g => g.Count)
+                .Take(15)
+                .ToList();
+
+            return topWords;
+        }
+
+        List<TopAuthor> TopAuthors(IEnumerable<Comment> all)
+        {
+            List<TopAuthor> topAuthors = all
+                .GroupBy(c => c.AuthorDisplayName)
+                .Select(g => new TopAuthor
+                {
+                    AuthorName = g.First().AuthorDisplayName,
+                    CommentsCount = g.Count(),
+                })
+                .OrderByDescending(a => a.CommentsCount)
+                .Take(Count)
+                .ToList();
+
+            return topAuthors;
+        }
     }
 }
