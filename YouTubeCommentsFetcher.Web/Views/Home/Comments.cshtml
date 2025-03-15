@@ -10,6 +10,22 @@
 
     <!-- Основная статистика -->
     <div class="row g-4 mb-5">
+        <div class="card mt-4 shadow">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-database me-2"></i>Управление данными
+                    </h5>
+                </div>
+                <div>
+                    <button onclick="saveData()"
+                            class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Сохранить как JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Общая статистика -->
         <div class="col-lg-4">
             <div class="card shadow-sm h-100">
@@ -521,3 +537,33 @@
         background: #eee;
     }
 </style>
+
+<script>
+    function saveData() {
+        const model = @Json.Serialize(Model);
+
+        fetch('@Url.Action("SaveData")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(model)
+        })
+            .then(response => {
+                if (!response.ok) throw new Error(response.statusText);
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `youtube_comments_${new Date().toISOString()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(error => {
+                alert('Ошибка сохранения: ' + error.message);
+            });
+    }
+</script>

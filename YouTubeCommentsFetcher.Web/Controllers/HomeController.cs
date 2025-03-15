@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using YouTubeCommentsFetcher.Web.Models;
 using YouTubeCommentsFetcher.Web.Services;
 
@@ -7,9 +10,11 @@ namespace YouTubeCommentsFetcher.Web.Controllers;
 
 public class HomeController(ILogger<HomeController> logger, IYouTubeService youTubeService) : Controller
 {
+    private int _count =5;
+
     public IActionResult Index()
     {
-        return View(new YouTubeCommentsViewModel());
+        return View();
     }
 
     [HttpPost]
@@ -101,6 +106,85 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
         });
     }
 
+    [HttpPost]
+    public IActionResult SaveData([FromBody] YouTubeCommentsViewModel model)
+    {
+        try
+        {
+            if (model?.Comments == null || model.Comments.Count == 0)
+            {
+                logger.LogWarning("Попытка сохранения пустой модели");
+                return BadRequest("Нет данных для сохранения");
+            }
+
+            logger.LogInformation($"Сохранение данных: {model.Comments.Count} комментариев");
+
+            JsonSerializerOptions options = new()
+            {
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            };
+
+            string json = JsonSerializer.Serialize(model, options);
+            byte[] byteArray = Encoding.UTF8.GetBytes(json);
+
+            logger.LogInformation($"Данные успешно сериализованы. Размер: {byteArray.Length} байт");
+
+            return File(byteArray, "application/json", $"youtube_comments_{DateTime.Now:yyyyMMddHHmmss}.json");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при сохранении данных");
+            TempData["Error"] = "Произошла ошибка при сохранении данных";
+            return StatusCode(500, "Ошибка сервера");
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> LoadData(IFormFile jsonFile)
+    {
+        logger.LogInformation("Начало загрузки данных из файла");
+
+        if (jsonFile == null || jsonFile.Length == 0)
+        {
+            logger.LogWarning("Попытка загрузки пустого файла");
+            TempData["Error"] = "Пожалуйста, выберите файл для загрузки";
+            return View("Index");
+        }
+
+        if (Path.GetExtension(jsonFile.FileName).ToLower() != ".json")
+        {
+            logger.LogWarning($"Неправильный формат файла: {jsonFile.FileName}");
+            TempData["Error"] = "Поддерживаются только JSON-файлы";
+            return View("Index");
+        }
+
+        try
+        {
+            using MemoryStream stream = new();
+            await jsonFile.CopyToAsync(stream);
+            string json = Encoding.UTF8.GetString(stream.ToArray());
+
+            YouTubeCommentsViewModel? model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
+
+            logger.LogInformation($"Успешно загружен файл: {jsonFile.FileName}");
+
+            return View("Comments", model);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Ошибка десериализации JSON");
+            TempData["Error"] = "Некорректный формат JSON-файла";
+            return View("Index");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при загрузке данных");
+            TempData["Error"] = "Ошибка при обработке файла";
+            return View("Index");
+        }
+    }
+
     private VideoAnalysisResult AnalyzeVideos(List<VideoComments> videos)
     {
         VideoAnalysisResult analysis = new()
@@ -114,7 +198,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     ThumbnailUrl = v.ThumbnailUrl,
                 })
                 .OrderByDescending(v => v.CommentsCount)
-                .Take(3)
+                .Take(_count)
                 .ToList(),
             TopLikedCommentsVideos = videos
                 .Select(v => new TopVideo
@@ -125,7 +209,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     ThumbnailUrl = v.ThumbnailUrl,
                 })
                 .OrderByDescending(v => v.CommentsCount)
-                .Take(3)
+                .Take(_count)
                 .ToList(),
             TopRepliedVideos = videos
                 .Select(v => new TopVideo
@@ -136,7 +220,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     ThumbnailUrl = v.ThumbnailUrl,
                 })
                 .OrderByDescending(v => v.CommentsCount)
-                .Take(3)
+                .Take(_count)
                 .ToList(),
             TopInteractiveVideos = videos
                 .Select(v => new TopVideo
@@ -149,7 +233,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     ThumbnailUrl = v.ThumbnailUrl,
                 })
                 .OrderByDescending(v => v.TotalInteractions)
-                .Take(3)
+                .Take(_count)
                 .ToList(),
         };
 
@@ -168,12 +252,12 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                     CommentsCount = g.Count(),
                 })
                 .OrderByDescending(a => a.CommentsCount)
-                .Take(3)
+                .Take(_count)
                 .ToList(),
             TopCommentsByReplies = comments
                 .Where(c => c.Replies.Count > 0)
                 .OrderByDescending(c => c.Replies.Count)
-                .Take(3)
+                .Take(_count)
                 .Select(c => new TopComment
                 {
                     CommentText = c.TextDisplay,
@@ -182,8 +266,9 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                 })
                 .ToList(),
             TopCommentsByLikes = comments
+                .Where(c => c.LikeCount is > 0)
                 .OrderByDescending(c => c.LikeCount)
-                .Take(3)
+                .Take(_count)
                 .Select(c => new TopComment
                 {
                     CommentText = c.TextDisplay,
@@ -194,11 +279,11 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
         };
 
         List<string> words = comments
-            .SelectMany(c => c.TextDisplay.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .SelectMany(c => c.TextDisplay.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .Where(word => word.Length > 3)
             .GroupBy(word => word.ToLower())
             .OrderByDescending(g => g.Count())
-            .Take(3)
+            .Take(20)
             .Select(g => g.Key)
             .ToList();
 
