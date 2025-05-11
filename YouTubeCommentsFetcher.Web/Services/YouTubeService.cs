@@ -1,6 +1,4 @@
-﻿using Google.Apis.YouTube.v3;
-using Google.Apis.YouTube.v3.Data;
-using YouTubeCommentsFetcher.Web.Models;
+﻿using YouTubeCommentsFetcher.Web.Models;
 using Comment = YouTubeCommentsFetcher.Web.Models.Comment;
 
 namespace YouTubeCommentsFetcher.Web.Services;
@@ -13,10 +11,10 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
 
         try
         {
-            ChannelsResource.ListRequest channelRequest = youtubeService.Channels.List("contentDetails");
+            var channelRequest = youtubeService.Channels.List("contentDetails");
             channelRequest.Id = channelId;
-            ChannelListResponse channelResponse = await channelRequest.ExecuteAsync(cancellationToken);
-            string? uploadsPlaylistId = channelResponse?.Items.FirstOrDefault()?.ContentDetails?.RelatedPlaylists?.Uploads;
+            var channelResponse = await channelRequest.ExecuteAsync(cancellationToken);
+            var uploadsPlaylistId = channelResponse?.Items.FirstOrDefault()?.ContentDetails?.RelatedPlaylists?.Uploads;
 
             if (uploadsPlaylistId != null)
             {
@@ -42,19 +40,19 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
 
         List<string> videoIds = [];
         string? nextPageToken = null;
-        int page = 0;
+        var page = 0;
 
         do
         {
             try
             {
-                PlaylistItemsResource.ListRequest playlistRequest = youtubeService.PlaylistItems.List("contentDetails,snippet");
+                var playlistRequest = youtubeService.PlaylistItems.List("contentDetails,snippet");
                 playlistRequest.PlaylistId = uploadsPlaylistId;
                 playlistRequest.MaxResults = pageSize;
                 playlistRequest.PageToken = nextPageToken;
 
                 logger.LogInformation("Отправка запроса на получение видео, страница: {Page}, размер страницы: {PageSize}", page + 1, pageSize);
-                PlaylistItemListResponse playlistResponse = await playlistRequest.ExecuteAsync(cancellationToken);
+                var playlistResponse = await playlistRequest.ExecuteAsync(cancellationToken);
 
                 if (playlistResponse.Items.Count == 0)
                 {
@@ -85,26 +83,26 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
 
         try
         {
-            VideosResource.ListRequest videoRequest = youtubeService.Videos.List("snippet");
+            var videoRequest = youtubeService.Videos.List("snippet");
             videoRequest.Id = videoId;
-            VideoListResponse videoResponse = await videoRequest.ExecuteAsync(cancellationToken);
-            string? videoTitle = videoResponse?.Items.FirstOrDefault()?.Snippet?.Title;
-            string videoUrl = $"https://www.youtube.com/watch?v={videoId}";
+            var videoResponse = await videoRequest.ExecuteAsync(cancellationToken);
+            var videoTitle = videoResponse?.Items.FirstOrDefault()?.Snippet?.Title;
+            var videoUrl = $"https://www.youtube.com/watch?v={videoId}";
 
-            CommentThreadsResource.ListRequest commentsRequest = youtubeService.CommentThreads.List("snippet,replies");
+            var commentsRequest = youtubeService.CommentThreads.List("snippet,replies");
             commentsRequest.VideoId = videoId;
             commentsRequest.MaxResults = 100;
 
             logger.LogInformation("Отправка запроса на получение комментариев для видео с ID: {VideoId}", videoId);
 
-            CommentThreadListResponse commentsResponse = await commentsRequest.ExecuteAsync(cancellationToken);
+            var commentsResponse = await commentsRequest.ExecuteAsync(cancellationToken);
 
             if (commentsResponse.Items.Count == 0)
             {
                 logger.LogWarning("Не найдено комментариев для видео с ID: {VideoId}", videoId);
             }
 
-            List<Comment> comments = commentsResponse.Items.Select(commentThread => new Comment
+            var comments = commentsResponse.Items.Select(commentThread => new Comment
                 {
                     AuthorDisplayName = commentThread.Snippet.TopLevelComment.Snippet.AuthorDisplayName,
                     TextDisplay = commentThread.Snippet.TopLevelComment.Snippet.TextDisplay,
@@ -118,13 +116,13 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
                                       LikeCount = reply.Snippet.LikeCount,
                                   })
                                   .ToList()
-                              ?? []
+                              ?? [],
                 })
                 .ToList();
 
             logger.LogInformation("Получено {CommentCount} комментариев для видео с ID: {VideoId}", comments.Count, videoId);
 
-            return new VideoComments
+            return new()
             {
                 VideoTitle = videoTitle,
                 VideoUrl = videoUrl,
@@ -137,7 +135,7 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
         {
             logger.LogError(ex, "Ошибка при получении комментариев для видео с ID: {VideoId}", videoId);
 
-            return new VideoComments
+            return new()
             {
                 VideoTitle = null,
                 VideoUrl = null,

@@ -10,7 +10,7 @@ public class CommentStatistics
 
     public Top<TopAuthor> TopAuthorsByComments => CommentAnalysis.TopAuthors;
     public List<TopComment> TopCommentsByReplies => CommentAnalysis.TopCommentsByReplies;
-    public List<TopComment> TopCommentsByLikes=> CommentAnalysis.TopCommentsByLikes;
+    public List<TopComment> TopCommentsByLikes => CommentAnalysis.TopCommentsByLikes;
     public Top<TopWord> MostUsedWords => CommentAnalysis.MostUsedWords;
 
     public List<TopVideo> TopCommentedVideos { get; set; } = [];

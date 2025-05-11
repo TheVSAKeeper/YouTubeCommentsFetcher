@@ -1,4 +1,3 @@
-using Google.Apis.Services;
 using Serilog;
 using Serilog.Events;
 using YouTubeCommentsFetcher.Web.Services;
@@ -15,12 +14,12 @@ try
 {
     Log.Information("Starting web application");
 
-    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+    var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddSerilog();
 
     builder.Services.AddControllersWithViews();
 
-    builder.Services.AddScoped<YouTubeService>(_ => new YouTubeService(new BaseClientService.Initializer
+    builder.Services.AddScoped<YouTubeService>(_ => new(new()
     {
         ApiKey = builder.Configuration["YouTubeApiKey"],
         ApplicationName = "YouTubeCommentsFetcher",
@@ -28,7 +27,7 @@ try
 
     builder.Services.AddScoped<IYouTubeService, YouTubeCommentsFetcher.Web.Services.YouTubeService>();
 
-    WebApplication app = builder.Build();
+    var app = builder.Build();
 
     app.UseSerilogRequestLogging();
 

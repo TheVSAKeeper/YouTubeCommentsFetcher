@@ -202,14 +202,14 @@
             if (data.required) {
                 param = data.required;
                 delete data.required;
-                data = $.extend({required: param}, data);
+                data = $.extend({ required: param }, data);
             }
 
             // Make sure remote is at back
             if (data.remote) {
                 param = data.remote;
                 delete data.remote;
-                data = $.extend(data, {remote: param});
+                data = $.extend(data, { remote: param });
             }
 
             return data;
@@ -793,7 +793,7 @@
                 }
 
                 for (method in rules) {
-                    rule = {method, parameters: rules[method]};
+                    rule = { method, parameters: rules[method] };
                     try {
                         result = $.validator.methods[method].call(this, val, element, rule.parameters);
 
@@ -869,7 +869,7 @@
             // old code, and will be removed in the next major release.
             defaultMessage(element, rule) {
                 if (typeof rule === "string") {
-                    rule = {method: rule};
+                    rule = { method: rule };
                 }
 
                 var message = this.findDefined(
@@ -1154,7 +1154,7 @@
                 return $.data(element, "previousValue") || $.data(element, "previousValue", {
                     old: null,
                     valid: true,
-                    message: this.defaultMessage(element, {method})
+                    message: this.defaultMessage(element, { method })
                 });
             },
 
@@ -1185,14 +1185,14 @@
         },
 
         classRuleSettings: {
-            required: {required: true},
-            email: {email: true},
-            url: {url: true},
-            date: {date: true},
-            dateISO: {dateISO: true},
-            number: {number: true},
-            digits: {digits: true},
-            creditcard: {creditcard: true}
+            required: { required: true },
+            email: { email: true },
+            url: { url: true },
+            date: { date: true },
+            dateISO: { dateISO: true },
+            number: { number: true },
+            digits: { digits: true },
+            creditcard: { creditcard: true }
         },
 
         addClassRules(className, rules) {
@@ -1575,8 +1575,8 @@
                 previous.originalMessage = previous.originalMessage || this.settings.messages[element.name][method];
                 this.settings.messages[element.name][method] = previous.message;
 
-                param = typeof param === "string" && {url: param} || param;
-                optionDataString = $.param($.extend({data: value}, param.data));
+                param = typeof param === "string" && { url: param } || param;
+                optionDataString = $.param($.extend({ data: value }, param.data));
                 if (previous.old === optionDataString) {
                     return previous.valid;
                 }
@@ -1607,7 +1607,7 @@
                             validator.showErrors();
                         } else {
                             errors = {};
-                            message = response || validator.defaultMessage(element, {method, parameters: value});
+                            message = response || validator.defaultMessage(element, { method, parameters: value });
                             errors[element.name] = previous.message = message;
                             validator.invalid[element.name] = true;
                             validator.showErrors(errors);

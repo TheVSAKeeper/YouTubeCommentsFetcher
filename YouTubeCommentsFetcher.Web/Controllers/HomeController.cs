@@ -12,6 +12,12 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
 {
     private const int Count = 3;
 
+    private static readonly JsonSerializerOptions Options = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     public IActionResult Index()
     {
         return View();
@@ -29,7 +35,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
             return View("Index", new YouTubeCommentsViewModel());
         }
 
-        string? uploadsPlaylistId = await youTubeService.GetUploadsPlaylistIdAsync(channelId, cancellationToken);
+        var uploadsPlaylistId = await youTubeService.GetUploadsPlaylistIdAsync(channelId, cancellationToken);
 
         if (uploadsPlaylistId == null)
         {
@@ -39,7 +45,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
         }
 
         logger.LogInformation("Получен идентификатор плейлиста загрузок: {UploadsPlaylistId}", uploadsPlaylistId);
-        List<string> videoIds = await youTubeService.GetVideoIdsFromPlaylistAsync(uploadsPlaylistId, pageSize, maxPages, cancellationToken);
+        var videoIds = await youTubeService.GetVideoIdsFromPlaylistAsync(uploadsPlaylistId, pageSize, maxPages, cancellationToken);
 
         logger.LogInformation("Получено {VideoCount} идентификаторов видео из плейлиста", videoIds.Count);
 
@@ -48,9 +54,9 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
             Videos = [],
         };
 
-        foreach (string videoId in videoIds)
+        foreach (var videoId in videoIds)
         {
-            VideoComments videoComments = await youTubeService.GetVideoCommentsAsync(videoId, cancellationToken);
+            var videoComments = await youTubeService.GetVideoCommentsAsync(videoId, cancellationToken);
             model.Videos.Add(videoComments);
         }
 
@@ -90,18 +96,12 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                 return BadRequest("Нет данных для сохранения");
             }
 
-            logger.LogInformation($"Сохранение данных: {model.Comments.Count} комментариев");
+            logger.LogInformation("Сохранение данных: {CommentsCount} комментариев", model.Comments.Count);
 
-            JsonSerializerOptions options = new()
-            {
-                WriteIndented = true,
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-            };
+            var json = JsonSerializer.Serialize(model, Options);
+            var byteArray = Encoding.UTF8.GetBytes(json);
 
-            string json = JsonSerializer.Serialize(model, options);
-            byte[] byteArray = Encoding.UTF8.GetBytes(json);
-
-            logger.LogInformation($"Данные успешно сериализованы. Размер: {byteArray.Length} байт");
+            logger.LogInformation("Данные успешно сериализованы. Размер: {ByteArrayLength} байт", byteArray.Length);
 
             return File(byteArray, "application/json", $"youtube_comments_{DateTime.Now:yyyyMMddHHmmss}.json");
         }
@@ -136,9 +136,9 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
         {
             using MemoryStream stream = new();
             await jsonFile.CopyToAsync(stream);
-            string json = Encoding.UTF8.GetString(stream.ToArray());
+            var json = Encoding.UTF8.GetString(stream.ToArray());
 
-            YouTubeCommentsViewModel? model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
+            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
             model.Statistics = Analyze(model.Comments, model.Videos);
 
             logger.LogInformation("Успешно загружен файл: {FileName}", jsonFile.FileName);
@@ -173,7 +173,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
             CommentAnalysis = AnalyzeComments(comments),
         };
 
-        VideoAnalysisResult videoAnalysis = AnalyzeVideos(videos);
+        var videoAnalysis = AnalyzeVideos(videos);
 
         statistics.TopCommentedVideos = videoAnalysis.TopCommentedVideos;
         statistics.TopLikedCommentsVideos = videoAnalysis.TopLikedCommentsVideos;
@@ -189,7 +189,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
         VideoAnalysisResult analysis = new()
         {
             TopCommentedVideos = videos
-                .Where(x=>x.Comments.Count > 0)
+                .Where(x => x.Comments.Count > 0)
                 .Select(v => new TopVideo
                 {
                     VideoTitle = v.VideoTitle,
@@ -201,7 +201,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                 .Take(Count)
                 .ToList(),
             TopLikedCommentsVideos = videos
-                .Where(x=>x.Comments.Count > 0)
+                .Where(x => x.Comments.Count > 0)
                 .Select(v => new TopVideo
                 {
                     VideoTitle = v.VideoTitle,
@@ -213,7 +213,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                 .Take(Count)
                 .ToList(),
             TopRepliedVideos = videos
-                .Where(x=>x.Comments.Count > 0)
+                .Where(x => x.Comments.Count > 0)
                 .Select(v => new TopVideo
                 {
                     VideoTitle = v.VideoTitle,
@@ -225,7 +225,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
                 .Take(Count)
                 .ToList(),
             TopInteractiveVideos = videos
-                .Where(x=>x.Comments.Count > 0)
+                .Where(x => x.Comments.Count > 0)
                 .Select(v => new TopVideo
                 {
                     VideoTitle = v.VideoTitle,
@@ -259,7 +259,6 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
             ByActivity = TopAuthors(comments.SelectMany(x => x.Replies.Append(x))),
         };
 
-
         CommentAnalysisResult analysis = new()
         {
             TopAuthors = authorTop,
@@ -292,7 +291,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
 
         List<TopWord> TopWords(IEnumerable<Comment> all)
         {
-            List<TopWord> topWords = all
+            var topWords = all
                 .SelectMany(c => c.TextDisplay.Split([" ", "<br>"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 .Select(x => x.Trim(',', '.', ';', '-', '!', '?', '(', ')'))
                 .Where(word => word.Length > 3 && !word.Contains("href", StringComparison.InvariantCultureIgnoreCase))
@@ -307,7 +306,7 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
 
         List<TopAuthor> TopAuthors(IEnumerable<Comment> all)
         {
-            List<TopAuthor> topAuthors = all
+            var topAuthors = all
                 .GroupBy(c => c.AuthorDisplayName)
                 .Select(g => new TopAuthor
                 {

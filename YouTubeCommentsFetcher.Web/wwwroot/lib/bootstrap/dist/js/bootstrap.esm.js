@@ -50,7 +50,6 @@ const getSelector = element => {
             return null;
         } // Just in case some CMS puts out a full URL with the anchor appended
 
-
         if (hrefAttr.includes('#') && !hrefAttr.startsWith('#')) {
             hrefAttr = `#${hrefAttr.split('#')[1]}`;
         }
@@ -81,7 +80,6 @@ const getTransitionDurationFromElement = element => {
         return 0;
     } // Get transition-duration of the element
 
-
     let {
         transitionDuration,
         transitionDelay
@@ -92,7 +90,6 @@ const getTransitionDurationFromElement = element => {
     if (!floatTransitionDuration && !floatTransitionDelay) {
         return 0;
     } // If multiple durations are defined, take the first
-
 
     transitionDuration = transitionDuration.split(',')[0];
     transitionDelay = transitionDelay.split(',')[0];
@@ -166,7 +163,6 @@ const findShadowRoot = element => {
         return null;
     } // Can find the shadow root otherwise it'll return the document
 
-
     if (typeof element.getRootNode === 'function') {
         const root = element.getRootNode();
         return root instanceof ShadowRoot ? root : null;
@@ -175,7 +171,6 @@ const findShadowRoot = element => {
     if (element instanceof ShadowRoot) {
         return element;
     } // when we don't find a shadow root
-
 
     if (!element.parentNode) {
         return null;
@@ -386,7 +381,6 @@ function bootstrapDelegationHandler(element, selector, fn) {
             }
         } // To please ESLint
 
-
         return null;
     };
 }
@@ -428,7 +422,6 @@ function addHandler(element, originalTypeEvent, handler, delegationFn, oneOff) {
         delegationFn = null;
     } // in case of mouseenter or mouseleave wrap the handler within a function that checks for its DOM position
     // this prevents the handler from being dispatched the same way as mouseover or mouseout does
-
 
     if (customEventsRegex.test(originalTypeEvent)) {
         const wrapFn = fn =>
@@ -568,7 +561,6 @@ const EventHandler = {
                 cancelable: true
             });
         } // merge custom information in our event
-
 
         if (typeof args !== 'undefined') {
             Object.keys(args).forEach(key =>
@@ -821,7 +813,6 @@ class Alert extends BaseComponent {
  * ------------------------------------------------------------------------
  */
 
-
 enableDismissTrigger(Alert, 'close');
 /**
  * ------------------------------------------------------------------------
@@ -886,7 +877,6 @@ class Button extends BaseComponent {
  * Data Api implementation
  * ------------------------------------------------------------------------
  */
-
 
 EventHandler.on(document, EVENT_CLICK_DATA_API$6, SELECTOR_DATA_TOGGLE$5, event => {
     event.preventDefault();
@@ -1149,7 +1139,6 @@ class Carousel extends BaseComponent {
 
         this._addEventListeners();
     } // Getters
-
 
     static get Default() {
         return Default$a;
@@ -1573,7 +1562,6 @@ class Carousel extends BaseComponent {
  * ------------------------------------------------------------------------
  */
 
-
 EventHandler.on(document, EVENT_CLICK_DATA_API$5, SELECTOR_DATA_SLIDE, Carousel.dataApiClickHandler);
 EventHandler.on(window, EVENT_LOAD_DATA_API$2, () => {
     const carousels = SelectorEngine.find(SELECTOR_DATA_RIDE);
@@ -1666,7 +1654,6 @@ class Collapse extends BaseComponent {
             this.toggle();
         }
     } // Getters
-
 
     static get Default() {
         return Default$9;
@@ -1885,7 +1872,6 @@ class Collapse extends BaseComponent {
  * ------------------------------------------------------------------------
  */
 
-
 EventHandler.on(document, EVENT_CLICK_DATA_API$4, SELECTOR_DATA_TOGGLE$4, function (event) {
     // preventDefault only for <a> elements (which change the URL) not inside the collapsible element
     if (event.target.tagName === 'A' || event.delegateTarget && event.delegateTarget.tagName === 'A') {
@@ -1986,7 +1972,6 @@ class Dropdown extends BaseComponent {
         this._inNavbar = this._detectNavbar();
     } // Getters
 
-
     static get Default() {
         return Default$8;
     }
@@ -2044,7 +2029,6 @@ class Dropdown extends BaseComponent {
                 if (composedPath.includes(context._element) || context._config.autoClose === 'inside' && !isMenuTarget || context._config.autoClose === 'outside' && isMenuTarget) {
                     continue;
                 } // Tab navigation through the dropdown menu or events from contained inputs shouldn't close the menu
-
 
                 if (context._menu.contains(event.target) && (event.type === 'keyup' && event.key === TAB_KEY$1 || /input|select|option|textarea|form/i.test(event.target.tagName))) {
                     continue;
@@ -2140,7 +2124,6 @@ class Dropdown extends BaseComponent {
         // only needed because of broken event delegation on iOS
         // https://www.quirksmode.org/blog/archives/2014/02/mouse_event_bub.html
 
-
         if ('ontouchstart' in document.documentElement && !parent.closest(SELECTOR_NAVBAR_NAV)) {
             [].concat(...document.body.children).forEach(elem => EventHandler.on(elem, 'mouseover', noop));
         }
@@ -2191,7 +2174,6 @@ class Dropdown extends BaseComponent {
             return;
         } // If this is a touch-enabled device we remove the extra
         // empty mouseover listeners we added for iOS support
-
 
         if ('ontouchstart' in document.documentElement) {
             [].concat(...document.body.children).forEach(elem => EventHandler.off(elem, 'mouseover', noop));
@@ -2271,7 +2253,6 @@ class Dropdown extends BaseComponent {
             return PLACEMENT_LEFT;
         } // We need to trim the value because custom properties can also include spaces
 
-
         const isEnd = getComputedStyle(this._menu).getPropertyValue('--bs-position').trim() === 'end';
 
         if (parentDropdown.classList.contains(CLASS_NAME_DROPUP)) {
@@ -2341,7 +2322,6 @@ class Dropdown extends BaseComponent {
         } // if target isn't included in items (e.g. when expanding the dropdown)
         // allow cycling to get the last item in case key equals ARROW_UP_KEY
 
-
         getNextActiveElement(items, target, key === ARROW_DOWN_KEY, !items.includes(target)).focus();
     } // Static
 
@@ -2352,7 +2332,6 @@ class Dropdown extends BaseComponent {
  * Data Api implementation
  * ------------------------------------------------------------------------
  */
-
 
 EventHandler.on(document, EVENT_KEYDOWN_DATA_API, SELECTOR_DATA_TOGGLE$3, Dropdown.dataApiKeydownHandler);
 EventHandler.on(document, EVENT_KEYDOWN_DATA_API, SELECTOR_MENU, Dropdown.dataApiKeydownHandler);
@@ -2396,9 +2375,7 @@ class ScrollBarHelper {
 
         this._disableOverFlow(); // give padding to element to balance the hidden scrollbar width
 
-
         this._setElementAttributes(this._element, 'paddingRight', calculatedValue => calculatedValue + width); // trick: We adjust positive paddingRight and negative marginRight to sticky-top elements to keep showing fullwidth
-
 
         this._setElementAttributes(SELECTOR_FIXED_CONTENT, 'paddingRight', calculatedValue => calculatedValue + width);
 
@@ -2540,7 +2517,6 @@ class Backdrop {
         });
     } // Private
 
-
     _getElement() {
         if (!this._element) {
             const backdrop = document.createElement('div');
@@ -2657,7 +2633,6 @@ class FocusTrap {
         EventHandler.off(document, EVENT_KEY$7);
     } // Private
 
-
     _handleFocusin(event) {
         const {
             target
@@ -2764,7 +2739,6 @@ class Modal extends BaseComponent {
         this._isTransitioning = false;
         this._scrollBar = new ScrollBarHelper();
     } // Getters
-
 
     static get Default() {
         return Default$5;
@@ -3017,6 +2991,7 @@ class Modal extends BaseComponent {
     _isAnimated() {
         return this._element.classList.contains(CLASS_NAME_FADE$3);
     }
+
     // the following methods are used to handle overflowing modals
     // ----------------------------------------------------------------------
 
@@ -3085,7 +3060,6 @@ class Modal extends BaseComponent {
  * Data Api implementation
  * ------------------------------------------------------------------------
  */
-
 
 EventHandler.on(document, EVENT_CLICK_DATA_API$2, SELECTOR_DATA_TOGGLE$2, function (event) {
     const target = getElementFromSelector(this);
@@ -3174,7 +3148,6 @@ class Offcanvas extends BaseComponent {
 
         this._addEventListeners();
     } // Getters
-
 
     static get NAME() {
         return NAME$5;
@@ -3336,7 +3309,6 @@ class Offcanvas extends BaseComponent {
  * Data Api implementation
  * ------------------------------------------------------------------------
  */
-
 
 EventHandler.on(document, EVENT_CLICK_DATA_API$1, SELECTOR_DATA_TOGGLE$1, function (event) {
     const target = getElementFromSelector(this);
@@ -3602,7 +3574,6 @@ class Tooltip extends BaseComponent {
         this._setListeners();
     } // Getters
 
-
     static get Default() {
         return Default$3;
     }
@@ -3746,7 +3717,6 @@ class Tooltip extends BaseComponent {
         // only needed because of broken event delegation on iOS
         // https://www.quirksmode.org/blog/archives/2014/02/mouse_event_bub.html
 
-
         if ('ontouchstart' in document.documentElement) {
             [].concat(...document.body.children).forEach(element => EventHandler.on(element, 'mouseover', noop));
         }
@@ -3853,7 +3823,6 @@ class Tooltip extends BaseComponent {
             templateElement.remove();
             return;
         } // we use append for html objects to maintain js events
-
 
         this.setElementContent(templateElement, content);
     }
@@ -4141,7 +4110,6 @@ class Tooltip extends BaseComponent {
         // const keysWithDifferentValues = Object.entries(this._config).filter(entry => this.constructor.Default[entry[0]] !== this._config[entry[0]])
         // `Object.fromEntries(keysWithDifferentValues)`
 
-
         return config;
     }
 
@@ -4183,7 +4151,6 @@ class Tooltip extends BaseComponent {
  * ------------------------------------------------------------------------
  * add .Tooltip to jQuery only if jQuery is present
  */
-
 
 defineJQueryPlugin(Tooltip);
 
@@ -4295,7 +4262,6 @@ class Popover extends Tooltip {
  * add .Popover to jQuery only if jQuery is present
  */
 
-
 defineJQueryPlugin(Popover);
 
 /**
@@ -4360,7 +4326,6 @@ class ScrollSpy extends BaseComponent {
 
         this._process();
     } // Getters
-
 
     static get Default() {
         return Default$1;
@@ -4517,7 +4482,6 @@ class ScrollSpy extends BaseComponent {
  * Data Api implementation
  * ------------------------------------------------------------------------
  */
-
 
 EventHandler.on(window, EVENT_LOAD_DATA_API, () => SelectorEngine.find(SELECTOR_DATA_SPY).forEach(spy => new ScrollSpy(spy)));
 /**
@@ -4704,7 +4668,6 @@ class Tab extends BaseComponent {
  * ------------------------------------------------------------------------
  */
 
-
 EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
     if (['A', 'AREA'].includes(this.tagName)) {
         event.preventDefault();
@@ -4782,7 +4745,6 @@ class Toast extends BaseComponent {
         this._setListeners();
     } // Getters
 
-
     static get DefaultType() {
         return DefaultType;
     }
@@ -4832,7 +4794,6 @@ class Toast extends BaseComponent {
 
         this._element.classList.remove(CLASS_NAME_HIDE); // @deprecated
 
-
         reflow(this._element);
 
         this._element.classList.add(CLASS_NAME_SHOW);
@@ -4855,7 +4816,6 @@ class Toast extends BaseComponent {
 
         const complete = () => {
             this._element.classList.add(CLASS_NAME_HIDE); // @deprecated
-
 
             this._element.classList.remove(CLASS_NAME_SHOWING);
 

@@ -217,7 +217,7 @@
                 }
             });
 
-            $.extend(rules, {"__dummy__": true});
+            $.extend(rules, { "__dummy__": true });
 
             if (!skipAttach) {
                 valInfo.attachValidation();
@@ -270,7 +270,7 @@
             fn = params;
             params = [];
         }
-        this.push({name: adapterName, params, adapt: fn});
+        this.push({ name: adapterName, params, adapt: fn });
         return this;
     };
 

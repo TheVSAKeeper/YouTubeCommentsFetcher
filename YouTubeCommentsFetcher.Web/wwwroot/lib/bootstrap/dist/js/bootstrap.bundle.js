@@ -55,7 +55,6 @@
                 return null;
             } // Just in case some CMS puts out a full URL with the anchor appended
 
-
             if (hrefAttr.includes('#') && !hrefAttr.startsWith('#')) {
                 hrefAttr = `#${hrefAttr.split('#')[1]}`;
             }
@@ -86,7 +85,6 @@
             return 0;
         } // Get transition-duration of the element
 
-
         let {
             transitionDuration,
             transitionDelay
@@ -97,7 +95,6 @@
         if (!floatTransitionDuration && !floatTransitionDelay) {
             return 0;
         } // If multiple durations are defined, take the first
-
 
         transitionDuration = transitionDuration.split(',')[0];
         transitionDelay = transitionDelay.split(',')[0];
@@ -171,7 +168,6 @@
             return null;
         } // Can find the shadow root otherwise it'll return the document
 
-
         if (typeof element.getRootNode === 'function') {
             const root = element.getRootNode();
             return root instanceof ShadowRoot ? root : null;
@@ -180,7 +176,6 @@
         if (element instanceof ShadowRoot) {
             return element;
         } // when we don't find a shadow root
-
 
         if (!element.parentNode) {
             return null;
@@ -391,7 +386,6 @@
                 }
             } // To please ESLint
 
-
             return null;
         };
     }
@@ -433,7 +427,6 @@
             delegationFn = null;
         } // in case of mouseenter or mouseleave wrap the handler within a function that checks for its DOM position
         // this prevents the handler from being dispatched the same way as mouseover or mouseout does
-
 
         if (customEventsRegex.test(originalTypeEvent)) {
             const wrapFn = fn =>
@@ -573,7 +566,6 @@
                     cancelable: true
                 });
             } // merge custom information in our event
-
 
             if (typeof args !== 'undefined') {
                 Object.keys(args).forEach(key =>
@@ -826,7 +818,6 @@
      * ------------------------------------------------------------------------
      */
 
-
     enableDismissTrigger(Alert, 'close');
     /**
      * ------------------------------------------------------------------------
@@ -891,7 +882,6 @@
      * Data Api implementation
      * ------------------------------------------------------------------------
      */
-
 
     EventHandler.on(document, EVENT_CLICK_DATA_API$6, SELECTOR_DATA_TOGGLE$5, event => {
         event.preventDefault();
@@ -1154,7 +1144,6 @@
 
             this._addEventListeners();
         } // Getters
-
 
         static get Default() {
             return Default$a;
@@ -1578,7 +1567,6 @@
      * ------------------------------------------------------------------------
      */
 
-
     EventHandler.on(document, EVENT_CLICK_DATA_API$5, SELECTOR_DATA_SLIDE, Carousel.dataApiClickHandler);
     EventHandler.on(window, EVENT_LOAD_DATA_API$2, () => {
         const carousels = SelectorEngine.find(SELECTOR_DATA_RIDE);
@@ -1671,7 +1659,6 @@
                 this.toggle();
             }
         } // Getters
-
 
         static get Default() {
             return Default$9;
@@ -1890,7 +1877,6 @@
      * ------------------------------------------------------------------------
      */
 
-
     EventHandler.on(document, EVENT_CLICK_DATA_API$4, SELECTOR_DATA_TOGGLE$4, function (event) {
         // preventDefault only for <a> elements (which change the URL) not inside the collapsible element
         if (event.target.tagName === 'A' || event.delegateTarget && event.delegateTarget.tagName === 'A') {
@@ -1997,7 +1983,6 @@
             // effective way to apply styles to an HTMLElement
             // $FlowFixMe[cannot-write]
 
-
             Object.assign(element.style, style);
             Object.keys(attributes).forEach(function (name) {
                 var value = attributes[name];
@@ -2054,7 +2039,6 @@
             });
         };
     } // eslint-disable-next-line import/no-unused-modules
-
 
     var applyStyles$1 = {
         name: 'applyStyles',
@@ -2137,11 +2121,9 @@
                     return true;
                 } // $FlowFixMe[prop-missing]: need a better way to handle this...
 
-
                 next = next.parentNode || next.host;
             } while (next);
         } // Give up, the result is false
-
 
         return false;
     }
@@ -2182,7 +2164,6 @@
     } // `.offsetParent` reports `null` for fixed elements, while absolute elements
     // return the containing block
 
-
     function getContainingBlock(element) {
         var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') !== -1;
         var isIE = navigator.userAgent.indexOf('Trident') !== -1;
@@ -2213,7 +2194,6 @@
         return null;
     } // Gets the closest ancestor positioned element. Handles some edge cases,
     // such as table ancestors and cross browser bugs.
-
 
     function getOffsetParent(element) {
         var window = getWindow(element);
@@ -2316,7 +2296,6 @@
             return;
         } // CSS selector
 
-
         if (typeof arrowElement === 'string') {
             arrowElement = state.elements.popper.querySelector(arrowElement);
 
@@ -2332,7 +2311,6 @@
 
         state.elements.arrow = arrowElement;
     } // eslint-disable-next-line import/no-unused-modules
-
 
     var arrow$1 = {
         name: 'arrow',
@@ -2401,7 +2379,6 @@
                     widthProp = 'scrollWidth';
                 }
             } // $FlowFixMe[incompatible-cast]: force type refinement, we compare offsetParent with window above, but Flow doesn't detect it
-
 
             offsetParent = offsetParent;
 
@@ -2473,7 +2450,6 @@
         });
     } // eslint-disable-next-line import/no-unused-modules
 
-
     var computeStyles$1 = {
         name: 'computeStyles',
         enabled: true,
@@ -2519,7 +2495,6 @@
             }
         };
     } // eslint-disable-next-line import/no-unused-modules
-
 
     var eventListeners = {
         name: 'eventListeners',
@@ -2713,7 +2688,6 @@
     // clipping (or hiding) overflowing elements with a position different from
     // `initial`
 
-
     function getClippingParents(element) {
         var clippingParents = listScrollParents(getParentNode(element));
         var canEscapeClipping = ['absolute', 'fixed'].indexOf(getComputedStyle$1(element).position) >= 0;
@@ -2723,13 +2697,11 @@
             return [];
         } // $FlowFixMe[incompatible-return]: https://github.com/facebook/flow/issues/1414
 
-
         return clippingParents.filter(function (clippingParent) {
             return isElement(clippingParent) && contains(clippingParent, clipperElement) && getNodeName(clippingParent) !== 'body';
         });
     } // Gets the maximum area that the element is visible in due to any number of
     // clipping parents
-
 
     function getClippingRect(element, boundary, rootBoundary) {
         var mainClippingParents = boundary === 'clippingParents' ? getClippingParents(element) : [].concat(boundary);
@@ -2899,7 +2871,6 @@
             allowedPlacements = placements$1;
         } // $FlowFixMe[incompatible-type]: Flow seems to have problems with two array unions...
 
-
         var overflows = allowedPlacements.reduce(function (acc, placement) {
             acc[placement] = detectOverflow(state, {
                 placement,
@@ -3042,7 +3013,6 @@
         }
     } // eslint-disable-next-line import/no-unused-modules
 
-
     var flip$1 = {
         name: 'flip',
         enabled: true,
@@ -3104,7 +3074,6 @@
         });
     } // eslint-disable-next-line import/no-unused-modules
 
-
     var hide$1 = {
         name: 'hide',
         enabled: true,
@@ -3156,7 +3125,6 @@
         state.modifiersData[name] = data;
     } // eslint-disable-next-line import/no-unused-modules
 
-
     var offset$1 = {
         name: 'offset',
         enabled: true,
@@ -3179,7 +3147,6 @@
             placement: state.placement
         });
     } // eslint-disable-next-line import/no-unused-modules
-
 
     var popperOffsets$1 = {
         name: 'popperOffsets',
@@ -3296,7 +3263,6 @@
         state.modifiersData[name] = data;
     } // eslint-disable-next-line import/no-unused-modules
 
-
     var preventOverflow$1 = {
         name: 'preventOverflow',
         enabled: true,
@@ -3327,7 +3293,6 @@
         return scaleX !== 1 || scaleY !== 1;
     } // Returns the composite rect of an element relative to its offsetParent.
     // Composite means it takes into account transforms as well as layout.
-
 
     function getCompositeRect(elementOrVirtualElement, offsetParent, isFixed) {
         if (isFixed === void 0) {
@@ -3528,7 +3493,6 @@
 
                         return;
                     } // Store the reference and popper rects to be read by modifiers
-
 
                     state.rects = {
                         reference: getCompositeRect(reference, getOffsetParent(popper), state.options.strategy === 'fixed'),
@@ -3768,7 +3732,6 @@
             this._inNavbar = this._detectNavbar();
         } // Getters
 
-
         static get Default() {
             return Default$8;
         }
@@ -3826,7 +3789,6 @@
                     if (composedPath.includes(context._element) || context._config.autoClose === 'inside' && !isMenuTarget || context._config.autoClose === 'outside' && isMenuTarget) {
                         continue;
                     } // Tab navigation through the dropdown menu or events from contained inputs shouldn't close the menu
-
 
                     if (context._menu.contains(event.target) && (event.type === 'keyup' && event.key === TAB_KEY$1 || /input|select|option|textarea|form/i.test(event.target.tagName))) {
                         continue;
@@ -3922,7 +3884,6 @@
             // only needed because of broken event delegation on iOS
             // https://www.quirksmode.org/blog/archives/2014/02/mouse_event_bub.html
 
-
             if ('ontouchstart' in document.documentElement && !parent.closest(SELECTOR_NAVBAR_NAV)) {
                 [].concat(...document.body.children).forEach(elem => EventHandler.on(elem, 'mouseover', noop));
             }
@@ -3973,7 +3934,6 @@
                 return;
             } // If this is a touch-enabled device we remove the extra
             // empty mouseover listeners we added for iOS support
-
 
             if ('ontouchstart' in document.documentElement) {
                 [].concat(...document.body.children).forEach(elem => EventHandler.off(elem, 'mouseover', noop));
@@ -4053,7 +4013,6 @@
                 return PLACEMENT_LEFT;
             } // We need to trim the value because custom properties can also include spaces
 
-
             const isEnd = getComputedStyle(this._menu).getPropertyValue('--bs-position').trim() === 'end';
 
             if (parentDropdown.classList.contains(CLASS_NAME_DROPUP)) {
@@ -4123,7 +4082,6 @@
             } // if target isn't included in items (e.g. when expanding the dropdown)
             // allow cycling to get the last item in case key equals ARROW_UP_KEY
 
-
             getNextActiveElement(items, target, key === ARROW_DOWN_KEY, !items.includes(target)).focus();
         } // Static
 
@@ -4134,7 +4092,6 @@
      * Data Api implementation
      * ------------------------------------------------------------------------
      */
-
 
     EventHandler.on(document, EVENT_KEYDOWN_DATA_API, SELECTOR_DATA_TOGGLE$3, Dropdown.dataApiKeydownHandler);
     EventHandler.on(document, EVENT_KEYDOWN_DATA_API, SELECTOR_MENU, Dropdown.dataApiKeydownHandler);
@@ -4178,9 +4135,7 @@
 
             this._disableOverFlow(); // give padding to element to balance the hidden scrollbar width
 
-
             this._setElementAttributes(this._element, 'paddingRight', calculatedValue => calculatedValue + width); // trick: We adjust positive paddingRight and negative marginRight to sticky-top elements to keep showing fullwidth
-
 
             this._setElementAttributes(SELECTOR_FIXED_CONTENT, 'paddingRight', calculatedValue => calculatedValue + width);
 
@@ -4322,7 +4277,6 @@
             });
         } // Private
 
-
         _getElement() {
             if (!this._element) {
                 const backdrop = document.createElement('div');
@@ -4439,7 +4393,6 @@
             EventHandler.off(document, EVENT_KEY$7);
         } // Private
 
-
         _handleFocusin(event) {
             const {
                 target
@@ -4546,7 +4499,6 @@
             this._isTransitioning = false;
             this._scrollBar = new ScrollBarHelper();
         } // Getters
-
 
         static get Default() {
             return Default$5;
@@ -4799,6 +4751,7 @@
         _isAnimated() {
             return this._element.classList.contains(CLASS_NAME_FADE$3);
         }
+
         // the following methods are used to handle overflowing modals
         // ----------------------------------------------------------------------
 
@@ -4867,7 +4820,6 @@
      * Data Api implementation
      * ------------------------------------------------------------------------
      */
-
 
     EventHandler.on(document, EVENT_CLICK_DATA_API$2, SELECTOR_DATA_TOGGLE$2, function (event) {
         const target = getElementFromSelector(this);
@@ -4956,7 +4908,6 @@
 
             this._addEventListeners();
         } // Getters
-
 
         static get NAME() {
             return NAME$5;
@@ -5118,7 +5069,6 @@
      * Data Api implementation
      * ------------------------------------------------------------------------
      */
-
 
     EventHandler.on(document, EVENT_CLICK_DATA_API$1, SELECTOR_DATA_TOGGLE$1, function (event) {
         const target = getElementFromSelector(this);
@@ -5384,7 +5334,6 @@
             this._setListeners();
         } // Getters
 
-
         static get Default() {
             return Default$3;
         }
@@ -5528,7 +5477,6 @@
             // only needed because of broken event delegation on iOS
             // https://www.quirksmode.org/blog/archives/2014/02/mouse_event_bub.html
 
-
             if ('ontouchstart' in document.documentElement) {
                 [].concat(...document.body.children).forEach(element => EventHandler.on(element, 'mouseover', noop));
             }
@@ -5635,7 +5583,6 @@
                 templateElement.remove();
                 return;
             } // we use append for html objects to maintain js events
-
 
             this.setElementContent(templateElement, content);
         }
@@ -5923,7 +5870,6 @@
             // const keysWithDifferentValues = Object.entries(this._config).filter(entry => this.constructor.Default[entry[0]] !== this._config[entry[0]])
             // `Object.fromEntries(keysWithDifferentValues)`
 
-
             return config;
         }
 
@@ -5965,7 +5911,6 @@
      * ------------------------------------------------------------------------
      * add .Tooltip to jQuery only if jQuery is present
      */
-
 
     defineJQueryPlugin(Tooltip);
 
@@ -6077,7 +6022,6 @@
      * add .Popover to jQuery only if jQuery is present
      */
 
-
     defineJQueryPlugin(Popover);
 
     /**
@@ -6142,7 +6086,6 @@
 
             this._process();
         } // Getters
-
 
         static get Default() {
             return Default$1;
@@ -6299,7 +6242,6 @@
      * Data Api implementation
      * ------------------------------------------------------------------------
      */
-
 
     EventHandler.on(window, EVENT_LOAD_DATA_API, () => SelectorEngine.find(SELECTOR_DATA_SPY).forEach(spy => new ScrollSpy(spy)));
     /**
@@ -6486,7 +6428,6 @@
      * ------------------------------------------------------------------------
      */
 
-
     EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
         if (['A', 'AREA'].includes(this.tagName)) {
             event.preventDefault();
@@ -6564,7 +6505,6 @@
             this._setListeners();
         } // Getters
 
-
         static get DefaultType() {
             return DefaultType;
         }
@@ -6614,7 +6554,6 @@
 
             this._element.classList.remove(CLASS_NAME_HIDE); // @deprecated
 
-
             reflow(this._element);
 
             this._element.classList.add(CLASS_NAME_SHOW);
@@ -6637,7 +6576,6 @@
 
             const complete = () => {
                 this._element.classList.add(CLASS_NAME_HIDE); // @deprecated
-
 
                 this._element.classList.remove(CLASS_NAME_SHOWING);
 
