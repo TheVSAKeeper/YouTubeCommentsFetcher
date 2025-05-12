@@ -1,38 +1,62 @@
 ﻿@model string
 @{
-    ViewData["Title"] = "Ожидание обработки";
+    ViewData["Title"] = "Обработка запроса";
 }
-
-<h2>Ваш запрос поставлен в очередь</h2>
+<h2>Запрос поставлен в очередь</h2>
 <p>Идентификатор задачи: <strong>@Model</strong></p>
-<p>Ожидайте... Когда задача будет завершена, вы автоматически перейдёте к результатам.</p>
+<div style="margin-top:20px;">
+    <label for="progress">Прогресс:</label>
+    <progress id="progress"
+              value="0"
+              max="100"
+              style="width: 100%; height: 24px;"></progress>
+    <div id="progress-text"
+         style="text-align: center; margin-top: 5px;">0%
+    </div>
+</div>
+
+<p id="statusText">Ожидание завершения фоновой задачи...</p>
 
 <script>
     const jobId = '@Model';
     const jsonUrl = `/Data/comments_${jobId}.json`;
+    const progressBar = document.getElementById("progress");
+    const progressText = document.getElementById("progress-text");
 
     async function checkStatus() {
         try {
             const res = await fetch(`/Home/CheckJobStatus?jobId=${jobId}`);
-            if (!res.ok) throw new Error(res.statusText);
             const { completed } = await res.json();
 
+            // Обновляем прогресс
+            await updateProgress();
+
             if (completed) {
+                document.getElementById("statusText").innerText = "Задача завершена. Загружаем данные...";
                 await postJsonFile();
             } else {
                 setTimeout(checkStatus, 3000);
             }
         } catch (err) {
-            console.error("Ошибка при CHECK статуса:", err);
+            console.error("Ошибка при проверке статуса:", err);
             setTimeout(checkStatus, 5000);
+        }
+    }
+
+    async function updateProgress() {
+        try {
+            const res = await fetch(`/Home/GetJobProgress?jobId=${jobId}`);
+            const { progress } = await res.json();
+            progressBar.value = progress;
+            progressText.textContent = `${progress}%`;
+        } catch (err) {
+            console.warn("Ошибка получения прогресса:", err);
         }
     }
 
     async function postJsonFile() {
         try {
             const jsonRes = await fetch(jsonUrl);
-            if (!jsonRes.ok)
-                throw new Error("Не удалось скачать JSON");
             const blob = await jsonRes.blob();
 
             const file = new File([blob], `comments_${jobId}.json`, { type: 'application/json' });
@@ -41,20 +65,15 @@
 
             const postRes = await fetch('/Home/LoadData', {
                 method: 'POST',
-                body: formData,
+                body: formData
             });
-
-            if (postRes.redirected) {
-                window.location.href = postRes.url;
-                return;
-            }
 
             const html = await postRes.text();
             document.open();
             document.write(html);
             document.close();
         } catch (err) {
-            console.error("Ошибка при POST JSON-файла:", err);
+            console.error("Ошибка при загрузке результата:", err);
         }
     }
 

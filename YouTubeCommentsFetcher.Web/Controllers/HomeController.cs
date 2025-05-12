@@ -1,5 +1,6 @@
 using Hangfire;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -20,10 +21,27 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
     };
 
     private static readonly Dictionary<string, bool> JobStatus = new();
+    private static readonly ConcurrentDictionary<string, int> JobProgress = new();
+
+    public static void UpdateJobProgress(string jobId, int percent)
+    {
+        JobProgress[jobId] = percent;
+    }
 
     public static void MarkJobAsCompleted(string jobId)
     {
         JobStatus[jobId] = true;
+    }
+
+    [HttpGet]
+    public IActionResult GetJobProgress(string jobId)
+    {
+        if (JobProgress.TryGetValue(jobId, out var progress))
+        {
+            return Json(new { progress });
+        }
+
+        return NotFound();
     }
 
     public IActionResult Index()

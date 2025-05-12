@@ -73,11 +73,11 @@ try
     }
 
     app.UseStaticFiles();
-    Directory.CreateDirectory(Path.Combine(builder.Environment.WebRootPath, "Data"));
+    Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "Data"));
 
     app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.WebRootPath, "Data")),
+        FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.ContentRootPath, "Data")),
         RequestPath = "/Data",
     });
 

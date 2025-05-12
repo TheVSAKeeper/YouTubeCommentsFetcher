@@ -32,10 +32,16 @@ public class FetchCommentsJob
         var videoIds = await _youTubeService.GetVideoIdsFromPlaylistAsync(uploadsPlaylistId, pageSize, maxPages);
         var model = new YouTubeCommentsViewModel();
 
-        foreach (var videoId in videoIds)
+        var total = videoIds.Count;
+
+        for (var i = 0; i < total; i++)
         {
-            var videoComments = await _youTubeService.GetVideoCommentsAsync(videoId);
-            model.Videos.Add(videoComments);
+            var videoId = videoIds[i];
+            var comments = await _youTubeService.GetVideoCommentsAsync(videoId);
+            model.Videos.Add(comments);
+
+            var progress = (int)Math.Round((i + 1) / (double)total * 100);
+            HomeController.UpdateJobProgress(jobId, progress);
         }
 
         model.Comments = model.Videos.SelectMany(v => v.Comments).ToList();
@@ -47,6 +53,7 @@ public class FetchCommentsJob
         await File.WriteAllTextAsync(path, json);
 
         _logger.LogInformation("Background fetch completed, data saved to {FileName}", path);
+        HomeController.UpdateJobProgress(jobId, 100);
         HomeController.MarkJobAsCompleted(jobId);
     }
 
