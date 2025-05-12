@@ -1,0 +1,62 @@
+﻿@model string
+@{
+    ViewData["Title"] = "Ожидание обработки";
+}
+
+<h2>Ваш запрос поставлен в очередь</h2>
+<p>Идентификатор задачи: <strong>@Model</strong></p>
+<p>Ожидайте... Когда задача будет завершена, вы автоматически перейдёте к результатам.</p>
+
+<script>
+    const jobId = '@Model';
+    const jsonUrl = `/Data/comments_${jobId}.json`;
+
+    async function checkStatus() {
+        try {
+            const res = await fetch(`/Home/CheckJobStatus?jobId=${jobId}`);
+            if (!res.ok) throw new Error(res.statusText);
+            const { completed } = await res.json();
+
+            if (completed) {
+                await postJsonFile();
+            } else {
+                setTimeout(checkStatus, 3000);
+            }
+        } catch (err) {
+            console.error("Ошибка при CHECK статуса:", err);
+            setTimeout(checkStatus, 5000);
+        }
+    }
+
+    async function postJsonFile() {
+        try {
+            const jsonRes = await fetch(jsonUrl);
+            if (!jsonRes.ok)
+                throw new Error("Не удалось скачать JSON");
+            const blob = await jsonRes.blob();
+
+            const file = new File([blob], `comments_${jobId}.json`, { type: 'application/json' });
+            const formData = new FormData();
+            formData.append('jsonFile', file);
+
+            const postRes = await fetch('/Home/LoadData', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (postRes.redirected) {
+                window.location.href = postRes.url;
+                return;
+            }
+
+            const html = await postRes.text();
+            document.open();
+            document.write(html);
+            document.close();
+        } catch (err) {
+            console.error("Ошибка при POST JSON-файла:", err);
+        }
+    }
+
+    checkStatus();
+</script>

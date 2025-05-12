@@ -1,5 +1,10 @@
+using Hangfire;
+using Hangfire.MemoryStorage;
+using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.Extensions.FileProviders;
 using Serilog;
 using Serilog.Events;
+using System.IO.Compression;
 using YouTubeCommentsFetcher.Web.Services;
 using YouTubeService = Google.Apis.YouTube.v3.YouTubeService;
 
@@ -27,9 +32,36 @@ try
 
     builder.Services.AddScoped<IYouTubeService, YouTubeCommentsFetcher.Web.Services.YouTubeService>();
 
+    builder.Services.AddHangfire(config =>
+        config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseMemoryStorage());
+
+    builder.Services.AddHangfireServer();
+
+    builder.Services.AddResponseCompression(options =>
+    {
+        options.EnableForHttps = true;
+        options.Providers.Add<BrotliCompressionProvider>();
+        options.Providers.Add<GzipCompressionProvider>();
+    });
+
+    builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+    {
+        options.Level = CompressionLevel.SmallestSize;
+    });
+
+    builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+    {
+        options.Level = CompressionLevel.SmallestSize;
+    });
+
     var app = builder.Build();
 
     app.UseSerilogRequestLogging();
+    app.UseResponseCompression();
+    app.MapStaticAssets();
 
     if (app.Environment.IsDevelopment())
     {
@@ -38,11 +70,16 @@ try
     else
     {
         app.UseExceptionHandler("/Home/Error");
-        app.UseHsts();
     }
 
-    app.UseHttpsRedirection();
     app.UseStaticFiles();
+    Directory.CreateDirectory(Path.Combine(builder.Environment.WebRootPath, "Data"));
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.WebRootPath, "Data")),
+        RequestPath = "/Data",
+    });
 
     app.UseRouting();
 

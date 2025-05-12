@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Text;
@@ -8,7 +9,7 @@ using YouTubeCommentsFetcher.Web.Services;
 
 namespace YouTubeCommentsFetcher.Web.Controllers;
 
-public class HomeController(ILogger<HomeController> logger, IYouTubeService youTubeService) : Controller
+public class HomeController(ILogger<HomeController> logger, IYouTubeService youTubeService, IBackgroundJobClient jobClient) : Controller
 {
     private const int Count = 3;
 
@@ -18,9 +19,44 @@ public class HomeController(ILogger<HomeController> logger, IYouTubeService youT
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    private static readonly Dictionary<string, bool> JobStatus = new();
+
+    public static void MarkJobAsCompleted(string jobId)
+    {
+        JobStatus[jobId] = true;
+    }
+
     public IActionResult Index()
     {
         return View();
+    }
+
+    [HttpPost]
+    public IActionResult FetchCommentsBackground(string channelId, int pageSize = 5, int maxPages = 1)
+    {
+        if (string.IsNullOrEmpty(channelId))
+        {
+            TempData["Error"] = "Invalid channel ID.";
+            return RedirectToAction("Index");
+        }
+
+        var jobId = Guid.NewGuid().ToString();
+        JobStatus[jobId] = false;
+
+        jobClient.Enqueue<FetchCommentsJob>(job => job.ExecuteAsync(channelId, pageSize, maxPages, jobId));
+
+        return View("JobQueued", jobId);
+    }
+
+    [HttpGet]
+    public IActionResult CheckJobStatus(string jobId)
+    {
+        if (JobStatus.TryGetValue(jobId, out var completed))
+        {
+            return Json(new { completed });
+        }
+
+        return NotFound();
     }
 
     [HttpPost]
