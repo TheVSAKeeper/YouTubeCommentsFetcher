@@ -9,9 +9,11 @@
     <progress id="progress"
               value="0"
               max="100"
-              style="width: 100%; height: 24px;"></progress>
+              style="width: 100%; height: 24px;">
+    </progress>
     <div id="progress-text"
-         style="text-align: center; margin-top: 5px;">0%
+         style="text-align: center; margin-top: 5px;">
+        0%
     </div>
 </div>
 
@@ -22,60 +24,33 @@
     const jsonUrl = `/Data/comments_${jobId}.json`;
     const progressBar = document.getElementById("progress");
     const progressText = document.getElementById("progress-text");
+    const statusUrl = `/Home/GetJobStatus?jobId=${jobId}`;
 
-    async function checkStatus() {
+    async function update() {
         try {
-            const res = await fetch(`/Home/CheckJobStatus?jobId=${jobId}`);
-            const { completed } = await res.json();
+            const response = await fetch(statusUrl);
+            const status = await response.json();
 
-            // Обновляем прогресс
-            await updateProgress();
+            progressBar.value = status.progress;
+            progressText.innerText = `${status.progress}%`;
 
-            if (completed) {
-                document.getElementById("statusText").innerText = "Задача завершена. Загружаем данные...";
-                await postJsonFile();
+            if (status.completed) {
+                const blob = await fetch(jsonUrl).then(x => x.blob());
+                const file = new File([blob], `comments_${jobId}.json`, { type: 'application/json' });
+                const formData = new FormData();
+                formData.append('jsonFile', file);
+                const response = await fetch('/Home/LoadData', { method: 'POST', body: formData });
+                const html = await response.text();
+                document.open();
+                document.write(html);
+                document.close();
             } else {
-                setTimeout(checkStatus, 3000);
+                setTimeout(update, 2000);
             }
-        } catch (err) {
-            console.error("Ошибка при проверке статуса:", err);
-            setTimeout(checkStatus, 5000);
+        } catch {
+            setTimeout(update, 5000);
         }
     }
 
-    async function updateProgress() {
-        try {
-            const res = await fetch(`/Home/GetJobProgress?jobId=${jobId}`);
-            const { progress } = await res.json();
-            progressBar.value = progress;
-            progressText.textContent = `${progress}%`;
-        } catch (err) {
-            console.warn("Ошибка получения прогресса:", err);
-        }
-    }
-
-    async function postJsonFile() {
-        try {
-            const jsonRes = await fetch(jsonUrl);
-            const blob = await jsonRes.blob();
-
-            const file = new File([blob], `comments_${jobId}.json`, { type: 'application/json' });
-            const formData = new FormData();
-            formData.append('jsonFile', file);
-
-            const postRes = await fetch('/Home/LoadData', {
-                method: 'POST',
-                body: formData
-            });
-
-            const html = await postRes.text();
-            document.open();
-            document.write(html);
-            document.close();
-        } catch (err) {
-            console.error("Ошибка при загрузке результата:", err);
-        }
-    }
-
-    checkStatus();
+    update();
 </script>

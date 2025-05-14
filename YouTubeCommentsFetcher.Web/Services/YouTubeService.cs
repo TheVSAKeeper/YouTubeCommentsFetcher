@@ -3,6 +3,13 @@ using Comment = YouTubeCommentsFetcher.Web.Models.Comment;
 
 namespace YouTubeCommentsFetcher.Web.Services;
 
+public interface IYouTubeService
+{
+    Task<string?> GetUploadsPlaylistIdAsync(string channelId, CancellationToken cancellationToken = default);
+    Task<List<string>> GetVideoIdsFromPlaylistAsync(string uploadsPlaylistId, int pageSize, int maxPages, CancellationToken cancellationToken = default);
+    Task<VideoComments> GetVideoCommentsAsync(string videoId, CancellationToken cancellationToken = default);
+}
+
 public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService, ILogger<YouTubeService> logger) : IYouTubeService
 {
     public async Task<string?> GetUploadsPlaylistIdAsync(string channelId, CancellationToken cancellationToken = default)

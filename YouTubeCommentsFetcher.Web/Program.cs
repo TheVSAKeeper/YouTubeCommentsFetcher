@@ -1,7 +1,7 @@
-using Hangfire;
-using Hangfire.MemoryStorage;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.FileProviders;
+using Quartz;
+using Quartz.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using System.IO.Compression;
@@ -31,14 +31,17 @@ try
     }));
 
     builder.Services.AddScoped<IYouTubeService, YouTubeCommentsFetcher.Web.Services.YouTubeService>();
+    builder.Services.AddSingleton<IJobStatusService, InMemoryJobStatusService>();
 
-    builder.Services.AddHangfire(config =>
-        config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseMemoryStorage());
+    builder.Services.AddQuartz(q =>
+    {
+        //q.AddJob<FetchCommentsJob>(opts => opts.WithIdentity("FetchCommentsJob")).StoreDurably() ;
+    });
 
-    builder.Services.AddHangfireServer();
+    builder.Services.AddQuartzServer(options =>
+    {
+        options.WaitForJobsToComplete = true;
+    });
 
     builder.Services.AddResponseCompression(options =>
     {
