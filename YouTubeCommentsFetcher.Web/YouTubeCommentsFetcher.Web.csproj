@@ -8,6 +8,7 @@
         <UserSecretsId>41633572-bfd7-4a87-ac31-35b9a87dc430</UserSecretsId>
         <LangVersion>default</LangVersion>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     </PropertyGroup>
 
     <ItemGroup>
