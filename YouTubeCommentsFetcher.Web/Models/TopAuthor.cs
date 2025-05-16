@@ -2,6 +2,6 @@ namespace YouTubeCommentsFetcher.Web.Models;
 
 public class TopAuthor
 {
-    public string AuthorName { get; set; }
-    public int CommentsCount { get; set; }
+    public required string AuthorName { get; init; }
+    public required int CommentsCount { get; init; }
 }

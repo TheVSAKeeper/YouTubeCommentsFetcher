@@ -31,7 +31,6 @@
                 </div>
                 <div class="card-body">
                     <dl class="stats-grid">
-                        <!-- Добавлен новый показатель -->
                         <div class="stat-item">
                             <dt>Всего взаимодействий</dt>
                             <dd>@(Model.Statistics.TotalComments + Model.Statistics.TotalReplies)</dd>
@@ -63,7 +62,6 @@
                     <h5 class="mb-0"><i class="fas fa-fire me-2"></i>Популярное</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Комментарии по ответам -->
                     <h6 class="text-muted mb-3"><i class="fas fa-reply me-1"></i>По ответам</h6>
                     @foreach (TopComment comment in Model.Statistics.TopCommentsByReplies)
                     {
@@ -197,12 +195,10 @@
         </div>
     </div>
 
-    <!-- Статистика по видео -->
     <div class="row g-4 mb-5">
         <div class="col-12">
             <h3 class="mb-4 text-secondary"><i class="fas fa-chart-line me-2"></i>Расширенная статистика</h3>
             <div class="row row-cols-1 row-cols-lg-3 g-4">
-                <!-- Новый топ по взаимодействиям -->
                 <div class="col">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-purple text-white">
@@ -230,7 +226,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- Самое комментируемое -->
                 <div class="col">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-success text-white">
@@ -256,7 +251,6 @@
                     </div>
                 </div>
 
-                <!-- Лайки комментариев -->
                 <div class="col">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-danger text-white">
@@ -282,7 +276,6 @@
                     </div>
                 </div>
 
-                <!-- Активные обсуждения -->
                 <div class="col">
                     <div class="card shadow-sm h-100">
                         <div class="card-header bg-purple text-white">
@@ -311,7 +304,6 @@
         </div>
     </div>
 
-    <!-- Список комментариев -->
     <div class="card shadow-sm mb-5">
         <div class="card-header bg-secondary text-white">
             <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Все комментарии</h5>

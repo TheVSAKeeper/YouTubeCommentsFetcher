@@ -1,6 +1,6 @@
 ﻿using YouTubeCommentsFetcher.Web.Models;
 
-namespace YouTubeCommentsFetcher.Web;
+namespace YouTubeCommentsFetcher.Web.Services;
 
 public static class Analyzer
 {
@@ -143,7 +143,11 @@ public static class Analyzer
                 .Select(x => x.Trim(',', '.', ';', '-', '!', '?', '(', ')'))
                 .Where(word => word.Length > 3 && !word.Contains("href", StringComparison.InvariantCultureIgnoreCase))
                 .GroupBy(word => word.ToLowerInvariant())
-                .Select(g => new TopWord(g.Key, g.Count()))
+                .Select(g => new TopWord
+                {
+                    Word = g.Key,
+                    Count = g.Count(),
+                })
                 .OrderByDescending(g => g.Count)
                 .Take(15)
                 .ToList();

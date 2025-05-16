@@ -128,7 +128,7 @@ public class HomeController(
             return View("Index");
         }
 
-        if (!Path.GetExtension(jsonFile.FileName).Equals(".json", StringComparison.InvariantCultureIgnoreCase))
+        if (Path.GetExtension(jsonFile.FileName).Equals(".json", StringComparison.InvariantCultureIgnoreCase) == false)
         {
             logger.LogWarning("Неправильный формат файла: {FileName}", jsonFile.FileName);
             TempData["Error"] = "Поддерживаются только JSON-файлы";

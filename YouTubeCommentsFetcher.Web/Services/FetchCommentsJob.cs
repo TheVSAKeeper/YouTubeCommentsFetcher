@@ -1,9 +1,8 @@
 ﻿using Quartz;
 using System.Text.Json;
 using YouTubeCommentsFetcher.Web.Models;
-using YouTubeCommentsFetcher.Web.Services;
 
-namespace YouTubeCommentsFetcher.Web;
+namespace YouTubeCommentsFetcher.Web.Services;
 
 public class FetchCommentsJob(
     IYouTubeService youTubeService,

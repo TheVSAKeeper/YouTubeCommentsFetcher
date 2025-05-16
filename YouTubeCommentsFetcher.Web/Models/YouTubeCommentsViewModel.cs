@@ -2,7 +2,7 @@ namespace YouTubeCommentsFetcher.Web.Models;
 
 public class YouTubeCommentsViewModel
 {
-    public List<VideoComments> Videos { get; set; } = [];
+    public List<VideoComments> Videos { get; init; } = [];
     public List<Comment> Comments { get; set; } = [];
-    public CommentStatistics Statistics { get; set; } = new();
+    public CommentStatistics? Statistics { get; set; }
 }

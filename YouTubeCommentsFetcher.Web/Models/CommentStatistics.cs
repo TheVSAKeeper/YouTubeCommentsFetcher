@@ -20,5 +20,5 @@ public class CommentStatistics
     public List<TopVideo> TopInteractiveVideos { get; set; } = [];
     public int TotalReplies { get; set; }
 
-    public CommentAnalysisResult CommentAnalysis { get; set; }
+    public required CommentAnalysisResult CommentAnalysis { get; init; }
 }
