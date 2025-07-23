@@ -47,7 +47,7 @@ public class FetchCommentsJob(
         }
 
         model.Comments = model.Videos.SelectMany(v => v.Comments).ToList();
-        model.Statistics = Analyzer.Analyze(model.Comments, model.Videos);
+        model.Statistics = await Analyzer.AnalyzeAsync(model.Comments, model.Videos);
 
         var json = JsonSerializer.Serialize(model, JsonSerializerOptions);
         var path = Path.Combine("Data", $"comments_{jobId}.json");

@@ -6,8 +6,18 @@ public static class Analyzer
 {
     private const int Count = 3;
 
-    public static CommentStatistics Analyze(List<Comment> comments, List<VideoComments> videos)
+    public static async Task<CommentStatistics> AnalyzeAsync(List<Comment> comments, List<VideoComments> videos, CancellationToken cancellationToken = default)
     {
+        if (comments.Count > 1000)
+        {
+            await Task.Yield();
+        }
+
+        var allCommentsWithReplies = comments.SelectMany(c => c.Replies.Append(c)).ToList();
+        var allReplies = comments.SelectMany(c => c.Replies).ToList();
+
+        cancellationToken.ThrowIfCancellationRequested();
+
         CommentStatistics statistics = new()
         {
             TotalComments = comments.Count,
@@ -15,12 +25,14 @@ public static class Analyzer
             AverageCommentsPerVideo = videos.Count > 0
                 ? Math.Round((double)comments.Count / videos.Count, 2)
                 : 0,
-            OldestCommentDate = comments.Min(c => c.PublishedAt),
-            NewestCommentDate = comments.Max(c => c.PublishedAt),
-            CommentAnalysis = AnalyzeComments(comments),
+            OldestCommentDate = comments.Count > 0 ? comments.Min(c => c.PublishedAt) : null,
+            NewestCommentDate = comments.Count > 0 ? comments.Max(c => c.PublishedAt) : null,
+            CommentAnalysis = await AnalyzeCommentsAsync(comments, allReplies, allCommentsWithReplies, cancellationToken),
         };
 
-        var videoAnalysis = AnalyzeVideos(videos);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var videoAnalysis = await AnalyzeVideosAsync(videos, cancellationToken);
 
         statistics.TopCommentedVideos = videoAnalysis.TopCommentedVideos;
         statistics.TopLikedCommentsVideos = videoAnalysis.TopLikedCommentsVideos;
@@ -31,8 +43,15 @@ public static class Analyzer
         return statistics;
     }
 
-    private static VideoAnalysisResult AnalyzeVideos(List<VideoComments> videos)
+    private static async Task<VideoAnalysisResult> AnalyzeVideosAsync(List<VideoComments> videos, CancellationToken cancellationToken = default)
     {
+        if (videos.Count > 100)
+        {
+            await Task.Yield();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
         VideoAnalysisResult analysis = new()
         {
             TopCommentedVideos = videos
@@ -90,20 +109,29 @@ public static class Analyzer
         return analysis;
     }
 
-    private static CommentAnalysisResult AnalyzeComments(List<Comment> comments)
+    private static async Task<CommentAnalysisResult> AnalyzeCommentsAsync(List<Comment> comments, List<Comment> allReplies, List<Comment> allCommentsWithReplies, CancellationToken cancellationToken = default)
     {
+        if (comments.Count > 1000)
+        {
+            await Task.Yield();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
         Top<TopWord> worldTop = new()
         {
-            ByComments = TopWords(comments),
-            ByReplies = TopWords(comments.SelectMany(x => x.Replies)),
-            ByActivity = TopWords(comments.SelectMany(x => x.Replies.Append(x))),
+            ByComments = await TopWordsAsync(comments, cancellationToken),
+            ByReplies = await TopWordsAsync(allReplies, cancellationToken),
+            ByActivity = await TopWordsAsync(allCommentsWithReplies, cancellationToken),
         };
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         Top<TopAuthor> authorTop = new()
         {
             ByComments = TopAuthors(comments),
-            ByReplies = TopAuthors(comments.SelectMany(x => x.Replies)),
-            ByActivity = TopAuthors(comments.SelectMany(x => x.Replies.Append(x))),
+            ByReplies = TopAuthors(allReplies),
+            ByActivity = TopAuthors(allCommentsWithReplies),
         };
 
         CommentAnalysisResult analysis = new()
@@ -135,40 +163,60 @@ public static class Analyzer
         };
 
         return analysis;
+    }
 
-        List<TopWord> TopWords(IEnumerable<Comment> all)
+    private static async Task<List<TopWord>> TopWordsAsync(IEnumerable<Comment> all, CancellationToken cancellationToken)
+    {
+        var comments = all.ToList();
+
+        const int chunkSize = 500;
+        var wordCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 0; i < comments.Count; i += chunkSize)
         {
-            var topWords = all
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var chunk = comments.Skip(i).Take(chunkSize);
+
+            var words = chunk
                 .SelectMany(c => c.TextDisplay.Split([" ", "<br>"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 .Select(x => x.Trim(',', '.', ';', '-', '!', '?', '(', ')'))
                 .Where(word => word.Length > 3 && !word.Contains("href", StringComparison.InvariantCultureIgnoreCase))
-                .GroupBy(word => word.ToLowerInvariant())
-                .Select(g => new TopWord
-                {
-                    Word = g.Key,
-                    Count = g.Count(),
-                })
-                .OrderByDescending(g => g.Count)
-                .Take(15)
-                .ToList();
+                .Select(word => word.ToLowerInvariant());
 
-            return topWords;
+            foreach (var word in words)
+            {
+                wordCounts[word] = wordCounts.GetValueOrDefault(word, 0) + 1;
+            }
+
+            if (i % (chunkSize * 2) == 0)
+            {
+                await Task.Yield();
+            }
         }
 
-        List<TopAuthor> TopAuthors(IEnumerable<Comment> all)
-        {
-            var topAuthors = all
-                .GroupBy(c => c.AuthorDisplayName)
-                .Select(g => new TopAuthor
-                {
-                    AuthorName = g.First().AuthorDisplayName,
-                    CommentsCount = g.Count(),
-                })
-                .OrderByDescending(a => a.CommentsCount)
-                .Take(Count)
-                .ToList();
+        var topWords = wordCounts
+            .Select(kvp => new TopWord { Word = kvp.Key, Count = kvp.Value })
+            .OrderByDescending(w => w.Count)
+            .Take(15)
+            .ToList();
 
-            return topAuthors;
-        }
+        return topWords;
+    }
+
+    private static List<TopAuthor> TopAuthors(IEnumerable<Comment> all)
+    {
+        var topAuthors = all
+            .GroupBy(c => c.AuthorDisplayName)
+            .Select(g => new TopAuthor
+            {
+                AuthorName = g.First().AuthorDisplayName,
+                CommentsCount = g.Count(),
+            })
+            .OrderByDescending(a => a.CommentsCount)
+            .Take(Count)
+            .ToList();
+
+        return topAuthors;
     }
 }

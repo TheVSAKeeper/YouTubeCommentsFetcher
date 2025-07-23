@@ -83,21 +83,41 @@
                 <div class="card-body">
                     <form asp-action="LoadData"
                           method="post"
-                          enctype="multipart/form-data">
+                          enctype="multipart/form-data"
+                          id="loadDataForm">
                         <div class="mb-3">
                             <label class="form-label">Выберите JSON-файл:</label>
                             <input type="file"
                                    name="jsonFile"
                                    class="form-control"
                                    accept=".json"
-                                   required>
-                            <div class="form-text">Максимальный размер файла: 10 МБ</div>
+                                   required
+                                   id="jsonFileInput">
+                            <div class="form-text">Максимальный размер файла: 50 МБ</div>
                         </div>
 
                         <button type="submit"
-                                class="btn btn-success">
+                                class="btn btn-success"
+                                id="loadDataBtn">
                             <i class="fas fa-file-import me-2"></i>Загрузить данные
                         </button>
+
+                        <div id="loadingIndicator"
+                             class="mt-3"
+                             style="display: none;">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm text-success me-2"
+                                     role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <span>Обработка файла, пожалуйста подождите...</span>
+                            </div>
+                            <div class="progress mt-2">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar"
+                                     style="width: 100%"></div>
+                            </div>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -105,3 +125,29 @@
     </div>
 
 </div>
+
+<script>
+    document.getElementById('loadDataForm').addEventListener('submit', function (e) {
+        const fileInput = document.getElementById('jsonFileInput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const submitBtn = document.getElementById('loadDataBtn');
+
+        if (fileInput.files.length > 0) {
+            const fileSize = fileInput.files[0].size;
+            const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
+
+            // Show warning for large files
+            if (fileSize > 10 * 1024 * 1024) { // 10MB
+                if (!confirm(`Файл довольно большой (${fileSizeMB} МБ). Обработка может занять несколько минут. Продолжить?`)) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+
+            // Show loading indicator
+            loadingIndicator.style.display = 'block';
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Обработка...';
+        }
+    });
+</script>

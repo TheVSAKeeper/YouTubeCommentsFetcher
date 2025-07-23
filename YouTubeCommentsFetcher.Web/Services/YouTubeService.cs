@@ -64,7 +64,7 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
                 if (playlistResponse.Items.Count == 0)
                 {
                     logger.LogWarning("Плейлист с ID: {UploadsPlaylistId} не содержит видео на странице {Page}", uploadsPlaylistId, page + 1);
-                    break; // Прерываем цикл, если нет видео
+                    break;
                 }
 
                 videoIds.AddRange(playlistResponse.Items.Select(item => item.ContentDetails.VideoId));
@@ -76,7 +76,7 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
             catch (Exception ex)
             {
                 logger.LogError(ex, "Ошибка при получении видео из плейлиста с ID: {UploadsPlaylistId}, страница: {Page}", uploadsPlaylistId, page);
-                break; // Прерываем цикл в случае ошибки
+                break;
             }
         } while (nextPageToken != null && page < maxPages);
 

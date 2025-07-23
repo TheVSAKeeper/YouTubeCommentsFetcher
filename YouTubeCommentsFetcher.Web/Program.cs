@@ -24,6 +24,25 @@ try
 
     builder.Services.AddControllersWithViews();
 
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestBodySize = 50 * 1024 * 1024;
+        options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+        options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
+    });
+
+    builder.Services.Configure<IISServerOptions>(options =>
+    {
+        options.MaxRequestBodySize = 50 * 1024 * 1024;
+    });
+
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestBodySize = 50 * 1024 * 1024;
+        options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+        options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
+    });
+
     builder.Services.AddScoped<YouTubeService>(_ => new(new()
     {
         ApiKey = builder.Configuration["YouTubeApiKey"],
@@ -35,7 +54,6 @@ try
 
     builder.Services.AddQuartz(q =>
     {
-        //q.AddJob<FetchCommentsJob>(opts => opts.WithIdentity("FetchCommentsJob")).StoreDurably() ;
     });
 
     builder.Services.AddQuartzServer(options =>

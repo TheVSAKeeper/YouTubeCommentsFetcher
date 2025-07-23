@@ -149,11 +149,31 @@ public class HomeController(
                 return View("Index");
             }
 
-            model.Statistics = Analyzer.Analyze(model.Comments, model.Videos);
+            var stopwatch = Stopwatch.StartNew();
+
+            if (model.Comments.Count > 1000)
+            {
+                logger.LogInformation("Начало анализа большого набора данных: {CommentsCount} комментариев, {VideosCount} видео",
+                    model.Comments.Count, model.Videos.Count);
+            }
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+            model.Statistics = await Analyzer.AnalyzeAsync(model.Comments, model.Videos, cts.Token);
+
+            stopwatch.Stop();
+
+            logger.LogInformation("Анализ данных завершен за {ElapsedMs} мс для {CommentsCount} комментариев",
+                stopwatch.ElapsedMilliseconds, model.Comments.Count);
 
             logger.LogInformation("Успешно загружен файл: {FileName}", jsonFile.FileName);
 
             return View("Comments", model);
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogWarning(ex, "Операция анализа данных была отменена по таймауту");
+            TempData["Error"] = "Обработка файла заняла слишком много времени. Попробуйте загрузить файл меньшего размера.";
+            return View("Index");
         }
         catch (JsonException ex)
         {
