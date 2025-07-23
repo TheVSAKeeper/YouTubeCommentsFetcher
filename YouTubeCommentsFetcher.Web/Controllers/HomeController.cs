@@ -117,9 +117,9 @@ public class HomeController(
     }
 
     [HttpPost]
-    public async Task<IActionResult> LoadData(IFormFile? jsonFile)
+    public async Task<IActionResult> UploadDataForAnalysis(IFormFile? jsonFile)
     {
-        logger.LogInformation("Начало загрузки данных из файла");
+        logger.LogInformation("Начало загрузки файла для анализа");
 
         if (jsonFile == null || jsonFile.Length == 0)
         {
@@ -135,57 +135,144 @@ public class HomeController(
             return View("Index");
         }
 
+        if (jsonFile.Length > 50 * 1024 * 1024)
+        {
+            logger.LogWarning("Файл слишком большой: {FileSize} байт", jsonFile.Length);
+            TempData["Error"] = "Размер файла не должен превышать 50 МБ";
+            return View("Index");
+        }
+
         try
         {
-            using MemoryStream stream = new();
-            await jsonFile.CopyToAsync(stream);
-            var json = Encoding.UTF8.GetString(stream.ToArray());
+            var jobId = Guid.NewGuid().ToString();
+            statusService.Init(jobId);
 
-            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
+            var tempDir = Path.Combine(Path.GetTempPath(), "YouTubeCommentsFetcher");
+            Directory.CreateDirectory(tempDir);
+            var tempFilePath = Path.Combine(tempDir, $"upload_{jobId}.json");
 
-            if (model == null)
+            using (var fileStream = new FileStream(tempFilePath, FileMode.Create))
             {
+                await jsonFile.CopyToAsync(fileStream);
+            }
+
+            logger.LogInformation("Файл сохранен временно: {TempFilePath}, размер: {FileSize} байт",
+                tempFilePath, jsonFile.Length);
+
+            try
+            {
+                var json = await System.IO.File.ReadAllTextAsync(tempFilePath);
+                var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
+
+                if (model == null)
+                {
+                    System.IO.File.Delete(tempFilePath);
+                    TempData["Error"] = "Некорректный формат JSON-файла";
+                    return View("Index");
+                }
+
+                logger.LogInformation("JSON валидация прошла успешно. Комментариев: {CommentsCount}, видео: {VideosCount}",
+                    model.Comments.Count, model.Videos.Count);
+            }
+            catch (JsonException ex)
+            {
+                logger.LogError(ex, "Ошибка валидации JSON");
+                System.IO.File.Delete(tempFilePath);
                 TempData["Error"] = "Некорректный формат JSON-файла";
                 return View("Index");
             }
 
-            var stopwatch = Stopwatch.StartNew();
+            var scheduler = await schedulerFactory.GetScheduler();
 
-            if (model.Comments.Count > 1000)
-            {
-                logger.LogInformation("Начало анализа большого набора данных: {CommentsCount} комментариев, {VideosCount} видео",
-                    model.Comments.Count, model.Videos.Count);
-            }
+            var job = JobBuilder.Create<AnalyzeDataJob>()
+                .WithIdentity($"analyze_job_{jobId}")
+                .UsingJobData("jobId", jobId)
+                .UsingJobData("filePath", tempFilePath)
+                .Build();
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-            model.Statistics = await Analyzer.AnalyzeAsync(model.Comments, model.Videos, cts.Token);
+            var trigger = TriggerBuilder.Create()
+                .WithIdentity($"analyze_trigger_{jobId}")
+                .StartNow()
+                .Build();
 
-            stopwatch.Stop();
+            await scheduler.ScheduleJob(job, trigger);
 
-            logger.LogInformation("Анализ данных завершен за {ElapsedMs} мс для {CommentsCount} комментариев",
-                stopwatch.ElapsedMilliseconds, model.Comments.Count);
+            logger.LogInformation("Задача анализа поставлена в очередь с ID: {JobId}", jobId);
 
-            logger.LogInformation("Успешно загружен файл: {FileName}", jsonFile.FileName);
-
-            return View("Comments", model);
-        }
-        catch (OperationCanceledException ex)
-        {
-            logger.LogWarning(ex, "Операция анализа данных была отменена по таймауту");
-            TempData["Error"] = "Обработка файла заняла слишком много времени. Попробуйте загрузить файл меньшего размера.";
-            return View("Index");
-        }
-        catch (JsonException ex)
-        {
-            logger.LogError(ex, "Ошибка десериализации JSON");
-            TempData["Error"] = "Некорректный формат JSON-файла";
-            return View("Index");
+            return RedirectToAction("AnalysisQueued", new { jobId });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при загрузке данных");
+            logger.LogError(ex, "Ошибка при загрузке файла");
             TempData["Error"] = "Ошибка при обработке файла";
             return View("Index");
+        }
+    }
+
+    [HttpGet]
+    public IActionResult AnalysisQueued(string jobId)
+    {
+        if (string.IsNullOrEmpty(jobId))
+        {
+            return RedirectToAction("Index");
+        }
+
+        return View(model: jobId);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> LoadAnalyzedData(string jobId)
+    {
+        if (string.IsNullOrEmpty(jobId))
+        {
+            return BadRequest("Job ID is required");
+        }
+
+        try
+        {
+            var dataPath = Path.Combine("Data", $"analyzed_{jobId}.json");
+
+            if (!System.IO.File.Exists(dataPath))
+            {
+                return NotFound("Analyzed data not found");
+            }
+
+            var json = await System.IO.File.ReadAllTextAsync(dataPath);
+
+            var deserializeOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true,
+            };
+
+            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json, deserializeOptions);
+
+            if (model == null)
+            {
+                logger.LogError("Deserialized model is null for job {JobId}", jobId);
+                return BadRequest("Invalid data format");
+            }
+
+            if (model.Comments == null)
+            {
+                logger.LogWarning("Comments collection is null for job {JobId}, initializing empty list", jobId);
+                model.Comments = new();
+            }
+
+            if (model.Videos == null)
+            {
+                logger.LogWarning("Videos collection is null for job {JobId}, this shouldn't happen", jobId);
+            }
+
+            logger.LogInformation("Загружены проанализированные данные для job {JobId}: {CommentsCount} комментариев, {VideosCount} видео",
+                jobId, model.Comments.Count, model.Videos.Count);
+
+            return View("Comments", model);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при загрузке проанализированных данных для job {JobId}", jobId);
+            return BadRequest("Error loading analyzed data");
         }
     }
 }

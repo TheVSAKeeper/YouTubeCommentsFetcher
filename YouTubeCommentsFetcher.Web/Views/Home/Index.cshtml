@@ -81,7 +81,7 @@
                     <h4><i class="fas fa-upload me-2"></i>Загрузка данных</h4>
                 </div>
                 <div class="card-body">
-                    <form asp-action="LoadData"
+                    <form asp-action="UploadDataForAnalysis"
                           method="post"
                           enctype="multipart/form-data"
                           id="loadDataForm">
@@ -99,7 +99,7 @@
                         <button type="submit"
                                 class="btn btn-success"
                                 id="loadDataBtn">
-                            <i class="fas fa-file-import me-2"></i>Загрузить данные
+                            <i class="fas fa-file-import me-2"></i>Загрузить для анализа
                         </button>
 
                         <div id="loadingIndicator"
@@ -110,7 +110,7 @@
                                      role="status">
                                     <span class="visually-hidden">Загрузка...</span>
                                 </div>
-                                <span>Обработка файла, пожалуйста подождите...</span>
+                                <span>Загрузка файла для анализа...</span>
                             </div>
                             <div class="progress mt-2">
                                 <div class="progress-bar progress-bar-striped progress-bar-animated"
@@ -136,18 +136,22 @@
             const fileSize = fileInput.files[0].size;
             const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
 
-            // Show warning for large files
-            if (fileSize > 10 * 1024 * 1024) { // 10MB
-                if (!confirm(`Файл довольно большой (${fileSizeMB} МБ). Обработка может занять несколько минут. Продолжить?`)) {
+            if (fileSize > 10 * 1024 * 1024) {
+                if (!confirm(`Файл довольно большой (${fileSizeMB} МБ). Обработка будет выполнена в фоновом режиме и может занять несколько минут. Продолжить?`)) {
                     e.preventDefault();
                     return;
                 }
             }
 
-            // Show loading indicator
+            if (fileSize > 50 * 1024 * 1024) {
+                alert(`Файл слишком большой (${fileSizeMB} МБ). Максимальный размер файла: 50 МБ.`);
+                e.preventDefault();
+                return;
+            }
+
             loadingIndicator.style.display = 'block';
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Обработка...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Загрузка...';
         }
     });
 </script>

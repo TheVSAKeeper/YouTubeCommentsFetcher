@@ -1,0 +1,135 @@
+@model string
+@{
+    ViewData["Title"] = "Анализ данных";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Анализ данных в процессе
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-cogs fa-3x text-success mb-3"></i>
+                        <h5>Ваш файл обрабатывается</h5>
+                        <p class="text-muted">Идентификатор задачи: <strong>@Model</strong></p>
+                    </div>
+
+                    <div class="progress mb-3"
+                         style="height: 25px;">
+                        <div id="progress"
+                             class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                             role="progressbar"
+                             style="width: 0%"
+                             aria-valuenow="0"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                            0%
+                        </div>
+                    </div>
+
+                    <div id="statusText"
+                         class="mb-3">
+                        <span class="badge bg-info">Инициализация...</span>
+                    </div>
+
+                    <div id="errorMessage"
+                         class="alert alert-danger"
+                         style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="errorText"></span>
+                    </div>
+
+                    <div class="text-muted small">
+                        <p><i class="fas fa-info-circle me-1"></i>Время обработки зависит от размера файла</p>
+                        <p><i class="fas fa-clock me-1"></i>Большие файлы могут обрабатываться до 15 минут</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const jobId = '@Model';
+    const statusUrl = `/Home/GetJobStatus?jobId=${jobId}`;
+    const loadDataUrl = '/Home/LoadAnalyzedData';
+
+    const progressBar = document.getElementById("progress");
+    const statusText = document.getElementById("statusText");
+    const errorMessage = document.getElementById("errorMessage");
+    const errorText = document.getElementById("errorText");
+
+    function updateProgressBar(progress) {
+        progressBar.style.width = progress + '%';
+        progressBar.setAttribute('aria-valuenow', progress);
+        progressBar.textContent = progress + '%';
+    }
+
+    function updateStatus(progress) {
+        if (progress === 0) {
+            statusText.innerHTML = '<span class="badge bg-info">Инициализация...</span>';
+        } else if (progress < 30) {
+            statusText.innerHTML = '<span class="badge bg-primary">Загрузка файла...</span>';
+        } else if (progress < 80) {
+            statusText.innerHTML = '<span class="badge bg-warning">Анализ данных...</span>';
+        } else if (progress < 100) {
+            statusText.innerHTML = '<span class="badge bg-success">Завершение...</span>';
+        } else {
+            statusText.innerHTML = '<span class="badge bg-success">Готово!</span>';
+        }
+    }
+
+    async function checkStatus() {
+        try {
+            const response = await fetch(statusUrl);
+            const status = await response.json();
+
+            updateProgressBar(status.progress);
+            updateStatus(status.progress);
+
+            if (status.errorMessage) {
+                errorText.textContent = status.errorMessage;
+                errorMessage.style.display = 'block';
+                statusText.innerHTML = '<span class="badge bg-danger">Ошибка</span>';
+                return;
+            }
+
+            if (status.completed && !status.errorMessage) {
+                statusText.innerHTML = '<span class="badge bg-success">Перенаправление к результатам...</span>';
+
+                const formData = new FormData();
+                formData.append('jobId', jobId);
+
+                const loadResponse = await fetch(loadDataUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (loadResponse.ok) {
+                    const html = await loadResponse.text();
+                    document.open();
+                    document.write(html);
+                    document.close();
+                } else {
+                    throw new Error('Failed to load analyzed data');
+                }
+            } else {
+                setTimeout(checkStatus, 2000);
+            }
+        } catch (error) {
+            console.error('Error checking status:', error);
+            errorText.textContent = 'Ошибка при проверке статуса. Попробуйте обновить страницу.';
+            errorMessage.style.display = 'block';
+            statusText.innerHTML = '<span class="badge bg-danger">Ошибка соединения</span>';
+
+            setTimeout(checkStatus, 5000);
+        }
+    }
+
+    checkStatus();
+</script>

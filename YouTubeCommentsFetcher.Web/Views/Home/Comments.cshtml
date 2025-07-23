@@ -30,28 +30,35 @@
                     <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Общая статистика</h5>
                 </div>
                 <div class="card-body">
-                    <dl class="stats-grid">
-                        <div class="stat-item">
-                            <dt>Всего взаимодействий</dt>
-                            <dd>@(Model.Statistics.TotalComments + Model.Statistics.TotalReplies)</dd>
-                        </div>
-                        <div class="stat-item">
-                            <dt>Всего комментариев</dt>
-                            <dd>@Model.Statistics.TotalComments</dd>
-                        </div>
-                        <div class="stat-item">
-                            <dt>Уникальных авторов</dt>
-                            <dd>@Model.Statistics.UniqueAuthors</dd>
-                        </div>
-                        <div class="stat-item">
-                            <dt>Среднее на видео</dt>
-                            <dd>@Model.Statistics.AverageCommentsPerVideo</dd>
-                        </div>
-                        <div class="stat-item">
-                            <dt>Период комментариев</dt>
-                            <dd>@(Model.Statistics.OldestCommentDate?.ToString("dd.MM.yy")) — @(Model.Statistics.NewestCommentDate?.ToString("dd.MM.yy"))</dd>
-                        </div>
-                    </dl>
+                    @if (Model.Statistics != null)
+                    {
+                        <dl class="stats-grid">
+                            <div class="stat-item">
+                                <dt>Всего взаимодействий</dt>
+                                <dd>@(Model.Statistics.TotalComments + Model.Statistics.TotalReplies)</dd>
+                            </div>
+                            <div class="stat-item">
+                                <dt>Всего комментариев</dt>
+                                <dd>@Model.Statistics.TotalComments</dd>
+                            </div>
+                            <div class="stat-item">
+                                <dt>Уникальных авторов</dt>
+                                <dd>@Model.Statistics.UniqueAuthors</dd>
+                            </div>
+                            <div class="stat-item">
+                                <dt>Среднее на видео</dt>
+                                <dd>@Model.Statistics.AverageCommentsPerVideo</dd>
+                            </div>
+                            <div class="stat-item">
+                                <dt>Период комментариев</dt>
+                                <dd>@(Model.Statistics.OldestCommentDate?.ToString("dd.MM.yy")) — @(Model.Statistics.NewestCommentDate?.ToString("dd.MM.yy"))</dd>
+                            </div>
+                        </dl>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Статистика недоступна</p>
+                    }
                 </div>
             </div>
         </div>
@@ -62,247 +69,260 @@
                     <h5 class="mb-0"><i class="fas fa-fire me-2"></i>Популярное</h5>
                 </div>
                 <div class="card-body">
-                    <h6 class="text-muted mb-3"><i class="fas fa-reply me-1"></i>По ответам</h6>
-                    @foreach (TopComment comment in Model.Statistics.TopCommentsByReplies)
+                    @if (Model.Statistics != null)
                     {
-                        <div class="comment-card mb-3">
-                            <div class="comment-text">@(new HtmlString(comment.CommentText))</div>
-                            <div class="d-flex justify-content-between mt-2">
-                                <small class="text-muted">@comment.Author</small>
-                                <small class="text-primary"><i class="fas fa-reply"></i> @comment.Count</small>
+                        <h6 class="text-muted mb-3"><i class="fas fa-reply me-1"></i>По ответам</h6>
+
+                        @foreach (TopComment comment in Model.Statistics.TopCommentsByReplies)
+                        {
+                            <div class="comment-card mb-3">
+                                <div class="comment-text">@(new HtmlString(comment.CommentText))</div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small class="text-muted">@comment.Author</small>
+                                    <small class="text-primary"><i class="fas fa-reply"></i> @comment.Count</small>
+                                </div>
                             </div>
-                        </div>
+                        }
+
+                        <h6 class="text-muted mb-3"><i class="fas fa-heart me-1"></i>По лайкам</h6>
+
+                        @foreach (TopComment comment in Model.Statistics.TopCommentsByLikes)
+                        {
+                            <div class="comment-card mb-3">
+                                <div class="comment-text">@(new HtmlString(comment.CommentText))</div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small class="text-muted">@comment.Author</small>
+                                    <small class="text-danger"><i class="fas fa-heart"></i> @comment.Count</small>
+                                </div>
+                            </div>
+                        }
                     }
-                    <h6 class="text-muted mb-3"><i class="fas fa-heart me-1"></i>По лайкам</h6>
-                    @foreach (TopComment comment in Model.Statistics.TopCommentsByLikes)
+                    else
                     {
-                        <div class="comment-card mb-3">
-                            <div class="comment-text">@(new HtmlString(comment.CommentText))</div>
-                            <div class="d-flex justify-content-between mt-2">
-                                <small class="text-muted">@comment.Author</small>
-                                <small class="text-danger"><i class="fas fa-heart"></i> @comment.Count</small>
-                            </div>
-                        </div>
+                        <p class="text-muted">Статистика недоступна</p>
                     }
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Топ авторов (комментарии)</h5>
-                </div>
-                <div class="card-body">
-                    @foreach (TopAuthor author in Model.Statistics.TopAuthorsByComments.ByComments)
-                    {
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-user-circle me-2 text-muted"></i>
-                                <span>@author.AuthorName</span>
+    @if (Model.Statistics != null)
+    {
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Топ авторов (комментарии)</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (TopAuthor author in Model.Statistics.TopAuthorsByComments.ByComments)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user-circle me-2 text-muted"></i>
+                                    <span>@author.AuthorName</span>
+                                </div>
+                                <span class="badge bg-primary">@author.CommentsCount</span>
                             </div>
-                            <span class="badge bg-primary">@author.CommentsCount</span>
-                        </div>
-                    }
+                        }
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Топ авторов (ответы)</h5>
-                </div>
-                <div class="card-body">
-                    @foreach (TopAuthor author in Model.Statistics.TopAuthorsByComments.ByReplies)
-                    {
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-user-circle me-2 text-muted"></i>
-                                <span>@author.AuthorName</span>
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Топ авторов (ответы)</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (TopAuthor author in Model.Statistics.TopAuthorsByComments.ByReplies)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user-circle me-2 text-muted"></i>
+                                    <span>@author.AuthorName</span>
+                                </div>
+                                <span class="badge bg-primary">@author.CommentsCount</span>
                             </div>
-                            <span class="badge bg-primary">@author.CommentsCount</span>
-                        </div>
-                    }
+                        }
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Топ авторов (все)</h5>
-                </div>
-                <div class="card-body">
-                    @foreach (TopAuthor author in Model.Statistics.TopAuthorsByComments.ByActivity)
-                    {
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-user-circle me-2 text-muted"></i>
-                                <span>@author.AuthorName</span>
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Топ авторов (все)</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (TopAuthor author in Model.Statistics.TopAuthorsByComments.ByActivity)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user-circle me-2 text-muted"></i>
+                                    <span>@author.AuthorName</span>
+                                </div>
+                                <span class="badge bg-primary">@author.CommentsCount</span>
                             </div>
-                            <span class="badge bg-primary">@author.CommentsCount</span>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Частые слова (комментарии)</h5>
-                </div>
-                <div class="card-body">
-                    @foreach (TopWord word in Model.Statistics.MostUsedWords.ByComments)
-                    {
-                        <span class="badge bg-warning text-dark me-1 mb-1">@word.Word (@word.Count)</span>
-                    }
+                        }
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Частые слова (ответы)</h5>
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Частые слова (комментарии)</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (TopWord word in Model.Statistics.MostUsedWords.ByComments)
+                        {
+                            <span class="badge bg-warning text-dark me-1 mb-1">@word.Word (@word.Count)</span>
+                        }
+                    </div>
                 </div>
-                <div class="card-body">
-                    @foreach (TopWord word in Model.Statistics.MostUsedWords.ByReplies)
-                    {
-                        <span class="badge bg-warning text-dark me-1 mb-1">@word.Word (@word.Count)</span>
-                    }
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Частые слова (ответы)</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (TopWord word in Model.Statistics.MostUsedWords.ByReplies)
+                        {
+                            <span class="badge bg-warning text-dark me-1 mb-1">@word.Word (@word.Count)</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Частые слова (все)</h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (TopWord word in Model.Statistics.MostUsedWords.ByActivity)
+                        {
+                            <span class="badge bg-warning text-dark me-1 mb-1">@word.Word (@word.Count)</span>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Частые слова (все)</h5>
-                </div>
-                <div class="card-body">
-                    @foreach (TopWord word in Model.Statistics.MostUsedWords.ByActivity)
-                    {
-                        <span class="badge bg-warning text-dark me-1 mb-1">@word.Word (@word.Count)</span>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-5">
-        <div class="col-12">
-            <h3 class="mb-4 text-secondary"><i class="fas fa-chart-line me-2"></i>Расширенная статистика</h3>
-            <div class="row row-cols-1 row-cols-lg-3 g-4">
-                <div class="col">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-purple text-white">
-                            <h5 class="mb-0"><i class="fas fa-retweet me-2"></i>Активность</h5>
-                        </div>
-                        <div class="card-body">
-                            @foreach (TopVideo video in Model.Statistics.TopInteractiveVideos)
-                            {
-                                <div class="video-card mb-3">
-                                    <div class="video-thumbnail mb-2">
-                                        <img src="@video.ThumbnailUrl"
-                                             class="rounded"
-                                             alt="@video.VideoTitle">
-                                    </div>
-                                    <h6 class="video-title">@video.VideoTitle</h6>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span class="badge bg-primary me-2">@video.CommentsCount</span>
-                                            <span class="badge bg-success">@video.RepliesCount</span>
+        <div class="row g-4 mb-5">
+            <div class="col-12">
+                <h3 class="mb-4 text-secondary"><i class="fas fa-chart-line me-2"></i>Расширенная статистика</h3>
+                <div class="row row-cols-1 row-cols-lg-3 g-4">
+                    <div class="col">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-purple text-white">
+                                <h5 class="mb-0"><i class="fas fa-retweet me-2"></i>Активность</h5>
+                            </div>
+                            <div class="card-body">
+                                @foreach (TopVideo video in Model.Statistics.TopInteractiveVideos)
+                                {
+                                    <div class="video-card mb-3">
+                                        <div class="video-thumbnail mb-2">
+                                            <img src="@video.ThumbnailUrl"
+                                                 class="rounded"
+                                                 alt="@video.VideoTitle">
                                         </div>
-                                        <span class="badge bg-purple">@video.TotalInteractions</span>
+                                        <h6 class="video-title">@video.VideoTitle</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="badge bg-primary me-2">@video.CommentsCount</span>
+                                                <span class="badge bg-success">@video.RepliesCount</span>
+                                            </div>
+                                            <span class="badge bg-purple">@video.TotalInteractions</span>
+                                        </div>
                                     </div>
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-success text-white">
-                            <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Обсуждаемые</h5>
-                        </div>
-                        <div class="card-body">
-                            @foreach (TopVideo video in Model.Statistics.TopCommentedVideos)
-                            {
-                                <div class="video-card mb-3">
-                                    <div class="video-thumbnail mb-2">
-                                        <img src="@video.ThumbnailUrl"
-                                             class="rounded"
-                                             alt="@video.VideoTitle">
+                    <div class="col">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Обсуждаемые</h5>
+                            </div>
+                            <div class="card-body">
+                                @foreach (TopVideo video in Model.Statistics.TopCommentedVideos)
+                                {
+                                    <div class="video-card mb-3">
+                                        <div class="video-thumbnail mb-2">
+                                            <img src="@video.ThumbnailUrl"
+                                                 class="rounded"
+                                                 alt="@video.VideoTitle">
+                                        </div>
+                                        <h6 class="video-title">@video.VideoTitle</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">Комментарии</small>
+                                            <span class="badge bg-success">@video.CommentsCount</span>
+                                        </div>
                                     </div>
-                                    <h6 class="video-title">@video.VideoTitle</h6>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">Комментарии</small>
-                                        <span class="badge bg-success">@video.CommentsCount</span>
-                                    </div>
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="col">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-danger text-white">
-                            <h5 class="mb-0"><i class="fas fa-heart me-2"></i>Лайки</h5>
-                        </div>
-                        <div class="card-body">
-                            @foreach (TopVideo video in Model.Statistics.TopLikedCommentsVideos)
-                            {
-                                <div class="video-card mb-3">
-                                    <div class="video-thumbnail mb-2">
-                                        <img src="@video.ThumbnailUrl"
-                                             class="rounded"
-                                             alt="@video.VideoTitle">
+                    <div class="col">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="fas fa-heart me-2"></i>Лайки</h5>
+                            </div>
+                            <div class="card-body">
+                                @foreach (TopVideo video in Model.Statistics.TopLikedCommentsVideos)
+                                {
+                                    <div class="video-card mb-3">
+                                        <div class="video-thumbnail mb-2">
+                                            <img src="@video.ThumbnailUrl"
+                                                 class="rounded"
+                                                 alt="@video.VideoTitle">
+                                        </div>
+                                        <h6 class="video-title">@video.VideoTitle</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">Лайки</small>
+                                            <span class="badge bg-danger">@video.CommentsCount</span>
+                                        </div>
                                     </div>
-                                    <h6 class="video-title">@video.VideoTitle</h6>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">Лайки</small>
-                                        <span class="badge bg-danger">@video.CommentsCount</span>
-                                    </div>
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="col">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-purple text-white">
-                            <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Обсуждения</h5>
-                        </div>
-                        <div class="card-body">
-                            @foreach (TopVideo video in Model.Statistics.TopRepliedVideos)
-                            {
-                                <div class="video-card mb-3">
-                                    <div class="video-thumbnail mb-2">
-                                        <img src="@video.ThumbnailUrl"
-                                             class="rounded"
-                                             alt="@video.VideoTitle">
+                    <div class="col">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-purple text-white">
+                                <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Обсуждения</h5>
+                            </div>
+                            <div class="card-body">
+                                @foreach (TopVideo video in Model.Statistics.TopRepliedVideos)
+                                {
+                                    <div class="video-card mb-3">
+                                        <div class="video-thumbnail mb-2">
+                                            <img src="@video.ThumbnailUrl"
+                                                 class="rounded"
+                                                 alt="@video.VideoTitle">
+                                        </div>
+                                        <h6 class="video-title">@video.VideoTitle</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">Ответы</small>
+                                            <span class="badge bg-purple">@video.CommentsCount</span>
+                                        </div>
                                     </div>
-                                    <h6 class="video-title">@video.VideoTitle</h6>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <small class="text-muted">Ответы</small>
-                                        <span class="badge bg-purple">@video.CommentsCount</span>
-                                    </div>
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 
     <div class="card shadow-sm mb-5">
         <div class="card-header bg-secondary text-white">

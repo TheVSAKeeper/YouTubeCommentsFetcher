@@ -35,11 +35,9 @@
             progressText.innerText = `${status.progress}%`;
 
             if (status.completed) {
-                const blob = await fetch(jsonUrl).then(x => x.blob());
-                const file = new File([blob], `comments_${jobId}.json`, { type: 'application/json' });
                 const formData = new FormData();
-                formData.append('jsonFile', file);
-                const response = await fetch('/Home/LoadData', { method: 'POST', body: formData });
+                formData.append('jobId', jobId);
+                const response = await fetch('/Home/LoadAnalyzedData', { method: 'POST', body: formData });
                 const html = await response.text();
                 document.open();
                 document.write(html);
