@@ -116,6 +116,53 @@ public class HomeController(
         }
     }
 
+    [HttpGet]
+    public async Task<IActionResult> LoadData(string? jobId)
+    {
+        if (string.IsNullOrEmpty(jobId))
+        {
+            return RedirectToAction("Index");
+        }
+
+        logger.LogInformation("Начало загрузки данных для задачи: {JobId}", jobId);
+
+        var jsonFilePath = Path.Combine("Data", $"comments_{jobId}.json");
+
+        if (System.IO.File.Exists(jsonFilePath) == false)
+        {
+            logger.LogWarning("Файл не найден: {FilePath}", jsonFilePath);
+            TempData["Error"] = "Файл с результатами не найден";
+            return RedirectToAction("Index");
+        }
+
+        try
+        {
+            var json = await System.IO.File.ReadAllTextAsync(jsonFilePath);
+            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
+
+            if (model == null)
+            {
+                TempData["Error"] = "Некорректный формат JSON-файла";
+                return RedirectToAction("Index");
+            }
+
+            logger.LogInformation("Успешно загружены данные для задачи: {JobId}", jobId);
+            return View("Comments", model);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Ошибка десериализации JSON для задачи: {JobId}", jobId);
+            TempData["Error"] = "Некорректный формат JSON-файла";
+            return RedirectToAction("Index");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при загрузке данных для задачи: {JobId}", jobId);
+            TempData["Error"] = "Ошибка при обработке файла";
+            return RedirectToAction("Index");
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> LoadData(IFormFile? jsonFile)
     {
@@ -148,8 +195,6 @@ public class HomeController(
                 TempData["Error"] = "Некорректный формат JSON-файла";
                 return View("Index");
             }
-
-            model.Statistics = Analyzer.Analyze(model.Comments, model.Videos);
 
             logger.LogInformation("Успешно загружен файл: {FileName}", jsonFile.FileName);
 

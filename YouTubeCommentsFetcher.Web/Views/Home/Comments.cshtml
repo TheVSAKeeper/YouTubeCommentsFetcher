@@ -15,6 +15,10 @@
                 </h5>
             </div>
             <div>
+                <button onclick="scrollToVideoComments()"
+                        class="btn btn-info me-2">
+                    <i class="fas fa-video me-2"></i>Комментарии по видео
+                </button>
                 <button onclick="saveData()"
                         class="btn btn-primary">
                     <i class="fas fa-save me-2"></i>Сохранить как JSON
@@ -360,7 +364,7 @@
         </div>
     </div>
 
-    <div class="card shadow-sm mb-5">
+    <div id="video-comments-section" class="card shadow-sm mb-5">
         <div class="card-header bg-secondary text-white">
             <h5 class="mb-0"><i class="fas fa-list-ol me-2"></i>Комментарии по видео</h5>
         </div>
@@ -371,14 +375,22 @@
                 {
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#video-@video.VideoId">
-                                @video.VideoTitle
-                                <span class="badge bg-primary ms-2">@video.Comments.Count коммент.</span>
-                                <span class="badge bg-success ms-2">@video.Comments.Sum(c => c.Replies.Count) ответов</span>
-                            </button>
+                            <div class="d-flex align-items-center">
+                                <button class="accordion-button collapsed flex-grow-1"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#video-@video.VideoId">
+                                    @video.VideoTitle
+                                    <span class="badge bg-primary ms-2">@video.Comments.Count коммент.</span>
+                                    <span class="badge bg-success ms-2">@video.Comments.Sum(c => c.Replies.Count) ответов</span>
+                                </button>
+                                <a href="@video.VideoUrl"
+                                   target="_blank"
+                                   class="btn btn-outline-danger btn-sm ms-2"
+                                   title="Открыть видео на YouTube">
+                                    <i class="fab fa-youtube"></i>
+                                </a>
+                            </div>
                         </h2>
                         <div id="video-@video.VideoId"
                              class="accordion-collapse">
@@ -391,6 +403,12 @@
                                                 <i class="fas fa-user-circle me-2 fa-sm text-muted"></i>
                                                 <strong>@comment.AuthorDisplayName</strong>
                                                 <div class="d-flex align-items-center ms-auto">
+                                                    <a href="@video.VideoUrl"
+                                                       target="_blank"
+                                                       class="btn btn-outline-secondary btn-sm me-2"
+                                                       title="Открыть комментарии к видео на YouTube">
+                                                        <i class="fas fa-external-link-alt"></i>
+                                                    </a>
                                                     <span class="likes-badge me-3">
                                                         <i class="fas fa-heart text-danger"></i>
                                                         @comment.LikeCount
@@ -410,10 +428,18 @@
                                                                 <div class="d-flex align-items-center">
                                                                     <i class="fas fa-reply me-2 fa-sm text-muted"></i>
                                                                     <strong>@reply.AuthorDisplayName</strong>
-                                                                    <span class="likes-badge ms-3">
-                                                                        <i class="fas fa-heart text-danger"></i>
-                                                                        @reply.LikeCount
-                                                                    </span>
+                                                                    <div class="ms-auto d-flex align-items-center">
+                                                                        <a href="@video.VideoUrl"
+                                                                           target="_blank"
+                                                                           class="btn btn-outline-secondary btn-sm me-2"
+                                                                           title="Открыть комментарии к видео на YouTube">
+                                                                            <i class="fas fa-external-link-alt"></i>
+                                                                        </a>
+                                                                        <span class="likes-badge">
+                                                                            <i class="fas fa-heart text-danger"></i>
+                                                                            @reply.LikeCount
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                                 <div class="reply-text ms-4 mt-1">
                                                                     @(new HtmlString(reply.TextDisplay))
@@ -620,5 +646,15 @@
                 a.remove();
             })
             .catch(error => alert('Ошибка сохранения: ' + error.message));
+    }
+
+    function scrollToVideoComments() {
+        const element = document.getElementById('video-comments-section');
+        if (element) {
+            element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
     }
 </script>

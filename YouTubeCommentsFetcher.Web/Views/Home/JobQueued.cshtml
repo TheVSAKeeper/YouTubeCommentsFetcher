@@ -39,11 +39,7 @@
                 const file = new File([blob], `comments_${jobId}.json`, { type: 'application/json' });
                 const formData = new FormData();
                 formData.append('jsonFile', file);
-                const response = await fetch('/Home/LoadData', { method: 'POST', body: formData });
-                const html = await response.text();
-                document.open();
-                document.write(html);
-                document.close();
+                window.location.href = `/Home/LoadData?jobId=${jobId}`;
             } else {
                 setTimeout(update, 2000);
             }
