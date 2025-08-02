@@ -12,6 +12,7 @@ namespace YouTubeCommentsFetcher.Web.Controllers;
 public class HomeController(
     ISchedulerFactory schedulerFactory,
     IJobStatusService statusService,
+    IDataPathService dataPathService,
     ILogger<HomeController> logger) : Controller
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -64,7 +65,14 @@ public class HomeController(
             return RedirectToAction("Index");
         }
 
-        return View(model: jobId);
+        var model = new JobQueuedViewModel
+        {
+            JobId = jobId,
+            DataFileUrl = dataPathService.GetCommentsFileUrl(jobId),
+            FileName = dataPathService.GetCommentsFileName(jobId),
+        };
+
+        return View(model);
     }
 
     [HttpGet]
@@ -106,7 +114,7 @@ public class HomeController(
 
             logger.LogInformation("Данные успешно сериализованы. Размер: {ByteArrayLength} байт", byteArray.Length);
 
-            return File(byteArray, "application/json", $"youtube_comments_{DateTime.Now:yyyyMMddHHmmss}.json");
+            return File(byteArray, "application/json", dataPathService.GetExportFileName());
         }
         catch (Exception ex)
         {
@@ -126,7 +134,7 @@ public class HomeController(
 
         logger.LogInformation("Начало загрузки данных для задачи: {JobId}", jobId);
 
-        var jsonFilePath = Path.Combine("Data", $"comments_{jobId}.json");
+        var jsonFilePath = dataPathService.GetCommentsFilePath(jobId);
 
         if (System.IO.File.Exists(jsonFilePath) == false)
         {

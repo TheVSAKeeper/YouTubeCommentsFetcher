@@ -40,5 +40,3 @@ public class InMemoryJobStatusService : IJobStatusService
             : new(0, false);
     }
 }
-
-public record JobStatus(int Progress, bool Completed);

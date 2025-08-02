@@ -33,6 +33,9 @@ try
     builder.Services.AddScoped<IYouTubeService, YouTubeCommentsFetcher.Web.Services.YouTubeService>();
     builder.Services.AddSingleton<IJobStatusService, InMemoryJobStatusService>();
 
+    builder.Services.Configure<DataPathOptions>(builder.Configuration.GetSection(DataPathOptions.SectionName));
+    builder.Services.AddSingleton<IDataPathService, DataPathService>();
+
     builder.Services.AddQuartz(q =>
     {
         //q.AddJob<FetchCommentsJob>(opts => opts.WithIdentity("FetchCommentsJob")).StoreDurably() ;
@@ -76,12 +79,14 @@ try
     }
 
     app.UseStaticFiles();
-    Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "Data"));
+
+    var dataPathService = app.Services.GetRequiredService<IDataPathService>();
+    dataPathService.EnsureDataDirectoryExists();
 
     app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.ContentRootPath, "Data")),
-        RequestPath = "/Data",
+        FileProvider = new PhysicalFileProvider(dataPathService.GetAbsoluteDataDirectory()),
+        RequestPath = $"/{dataPathService.RelativeDataDirectory}",
     });
 
     app.UseRouting();

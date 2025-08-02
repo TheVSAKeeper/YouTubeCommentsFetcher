@@ -7,6 +7,7 @@ namespace YouTubeCommentsFetcher.Web.Services;
 public class FetchCommentsJob(
     IYouTubeService youTubeService,
     IJobStatusService statusService,
+    IDataPathService dataPathService,
     ILogger<FetchCommentsJob> logger) : IJob
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
@@ -50,8 +51,7 @@ public class FetchCommentsJob(
         model.Statistics = Analyzer.Analyze(model.Comments, model.Videos);
 
         var json = JsonSerializer.Serialize(model, JsonSerializerOptions);
-        var path = Path.Combine("Data", $"comments_{jobId}.json");
-        Directory.CreateDirectory("Data");
+        var path = dataPathService.GetCommentsFilePath(jobId);
         await File.WriteAllTextAsync(path, json);
 
         logger.LogInformation("Background fetch completed, data saved to {FileName}", path);

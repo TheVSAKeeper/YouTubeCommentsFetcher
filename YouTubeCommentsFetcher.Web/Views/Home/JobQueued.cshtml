@@ -1,9 +1,9 @@
-﻿@model string
+﻿@model JobQueuedViewModel
 @{
     ViewData["Title"] = "Обработка запроса";
 }
 <h2>Запрос поставлен в очередь</h2>
-<p>Идентификатор задачи: <strong>@Model</strong></p>
+<p>Идентификатор задачи: <strong>@Model.JobId</strong></p>
 <div style="margin-top:20px;">
     <label for="progress">Прогресс:</label>
     <progress id="progress"
@@ -20,8 +20,8 @@
 <p id="statusText">Ожидание завершения фоновой задачи...</p>
 
 <script>
-    const jobId = '@Model';
-    const jsonUrl = `/Data/comments_${jobId}.json`;
+    const jobId = '@Model.JobId';
+    const jsonUrl = '@Model.DataFileUrl';
     const progressBar = document.getElementById("progress");
     const progressText = document.getElementById("progress-text");
     const statusUrl = `/Home/GetJobStatus?jobId=${jobId}`;
@@ -36,7 +36,7 @@
 
             if (status.completed) {
                 const blob = await fetch(jsonUrl).then(x => x.blob());
-                const file = new File([blob], `comments_${jobId}.json`, { type: 'application/json' });
+                const file = new File([blob], '@Model.FileName', { type: 'application/json' });
                 const formData = new FormData();
                 formData.append('jsonFile', file);
                 window.location.href = `/Home/LoadData?jobId=${jobId}`;
