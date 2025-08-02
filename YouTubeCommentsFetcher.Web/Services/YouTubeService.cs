@@ -76,7 +76,7 @@ public class YouTubeService(Google.Apis.YouTube.v3.YouTubeService youtubeService
             catch (Exception ex)
             {
                 logger.LogError(ex, "Ошибка при получении видео из плейлиста с ID: {UploadsPlaylistId}, страница: {Page}", uploadsPlaylistId, page);
-                break; // Прерываем цикл в случае ошибки
+                break;
             }
         } while (nextPageToken != null && page < maxPages);
 

@@ -63,6 +63,31 @@ public interface IDataPathService
     /// </summary>
     /// <returns>Имя файла для экспорта</returns>
     string GetExportFileName();
+
+    /// <summary>
+    /// Получить имя файла индекса метаданных результатов выборки
+    /// </summary>
+    /// <returns>Имя файла индекса</returns>
+    string GetFetchResultsIndexFileName();
+
+    /// <summary>
+    /// Получить путь к файлу индекса метаданных результатов выборки
+    /// </summary>
+    /// <returns>Путь к файлу индекса</returns>
+    string GetFetchResultsIndexFilePath();
+
+    /// <summary>
+    /// Получить абсолютный путь к файлу индекса метаданных результатов выборки
+    /// </summary>
+    /// <returns>Абсолютный путь к файлу индекса</returns>
+    string GetAbsoluteFetchResultsIndexFilePath();
+
+    /// <summary>
+    /// Получить абсолютный путь к файлу комментариев для задачи
+    /// </summary>
+    /// <param name="jobId">Идентификатор задачи</param>
+    /// <returns>Абсолютный путь к файлу комментариев</returns>
+    string GetAbsoluteCommentsFilePath(string jobId);
 }
 
 public class DataPathService(IOptions<DataPathOptions> options, IWebHostEnvironment environment) : IDataPathService
@@ -110,5 +135,25 @@ public class DataPathService(IOptions<DataPathOptions> options, IWebHostEnvironm
     public string GetExportFileName()
     {
         return $"youtube_comments_{DateTime.Now:yyyyMMddHHmmss}.json";
+    }
+
+    public string GetFetchResultsIndexFileName()
+    {
+        return "fetch_results_index.json";
+    }
+
+    public string GetFetchResultsIndexFilePath()
+    {
+        return GetDataFilePath(GetFetchResultsIndexFileName());
+    }
+
+    public string GetAbsoluteFetchResultsIndexFilePath()
+    {
+        return Path.Combine(GetAbsoluteDataDirectory(), GetFetchResultsIndexFileName());
+    }
+
+    public string GetAbsoluteCommentsFilePath(string jobId)
+    {
+        return Path.Combine(GetAbsoluteDataDirectory(), GetCommentsFileName(jobId));
     }
 }

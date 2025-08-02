@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Quartz;
 using System.Diagnostics;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
+using YouTubeCommentsFetcher.Web.Configuration;
 using YouTubeCommentsFetcher.Web.Models;
 using YouTubeCommentsFetcher.Web.Services;
 
@@ -13,14 +13,9 @@ public class HomeController(
     ISchedulerFactory schedulerFactory,
     IJobStatusService statusService,
     IDataPathService dataPathService,
+    IFetchResultsService fetchResultsService,
     ILogger<HomeController> logger) : Controller
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     public IActionResult Index()
     {
         return View();
@@ -36,7 +31,7 @@ public class HomeController(
         }
 
         var jobId = Guid.NewGuid().ToString();
-        statusService.Init(jobId);
+        statusService.Init(jobId, channelId);
 
         var scheduler = await schedulerFactory.GetScheduler();
 
@@ -109,7 +104,7 @@ public class HomeController(
 
             logger.LogInformation("Сохранение данных: {CommentsCount} комментариев", model.Comments.Count);
 
-            var json = JsonSerializer.Serialize(model, Options);
+            var json = JsonSerializer.Serialize(model, JsonConfiguration.Export);
             var byteArray = Encoding.UTF8.GetBytes(json);
 
             logger.LogInformation("Данные успешно сериализованы. Размер: {ByteArrayLength} байт", byteArray.Length);
@@ -134,34 +129,19 @@ public class HomeController(
 
         logger.LogInformation("Начало загрузки данных для задачи: {JobId}", jobId);
 
-        var jsonFilePath = dataPathService.GetCommentsFilePath(jobId);
-
-        if (System.IO.File.Exists(jsonFilePath) == false)
-        {
-            logger.LogWarning("Файл не найден: {FilePath}", jsonFilePath);
-            TempData["Error"] = "Файл с результатами не найден";
-            return RedirectToAction("Index");
-        }
-
         try
         {
-            var json = await System.IO.File.ReadAllTextAsync(jsonFilePath);
-            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
+            var model = await fetchResultsService.GetFetchResultAsync(jobId);
 
             if (model == null)
             {
-                TempData["Error"] = "Некорректный формат JSON-файла";
+                logger.LogWarning("Результат не найден для задачи: {JobId}", jobId);
+                TempData["Error"] = "Файл с результатами не найден";
                 return RedirectToAction("Index");
             }
 
             logger.LogInformation("Успешно загружены данные для задачи: {JobId}", jobId);
             return View("Comments", model);
-        }
-        catch (JsonException ex)
-        {
-            logger.LogError(ex, "Ошибка десериализации JSON для задачи: {JobId}", jobId);
-            TempData["Error"] = "Некорректный формат JSON-файла";
-            return RedirectToAction("Index");
         }
         catch (Exception ex)
         {
@@ -196,7 +176,7 @@ public class HomeController(
             await jsonFile.CopyToAsync(stream);
             var json = Encoding.UTF8.GetString(stream.ToArray());
 
-            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json);
+            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json, JsonConfiguration.Default);
 
             if (model == null)
             {

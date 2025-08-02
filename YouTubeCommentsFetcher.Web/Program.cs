@@ -5,6 +5,7 @@ using Quartz.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using System.IO.Compression;
+using YouTubeCommentsFetcher.Web.Configuration;
 using YouTubeCommentsFetcher.Web.Services;
 using YouTubeService = Google.Apis.YouTube.v3.YouTubeService;
 
@@ -22,7 +23,15 @@ try
     var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddSerilog();
 
-    builder.Services.AddControllersWithViews();
+    builder.Services.AddControllersWithViews()
+        .AddJsonOptions(options =>
+        {
+            var defaultOptions = JsonConfiguration.Default;
+            options.JsonSerializerOptions.WriteIndented = defaultOptions.WriteIndented;
+            options.JsonSerializerOptions.PropertyNamingPolicy = defaultOptions.PropertyNamingPolicy;
+            options.JsonSerializerOptions.PropertyNameCaseInsensitive = defaultOptions.PropertyNameCaseInsensitive;
+            options.JsonSerializerOptions.DefaultIgnoreCondition = defaultOptions.DefaultIgnoreCondition;
+        });
 
     builder.Services.AddScoped<YouTubeService>(_ => new(new()
     {
@@ -35,6 +44,7 @@ try
 
     builder.Services.Configure<DataPathOptions>(builder.Configuration.GetSection(DataPathOptions.SectionName));
     builder.Services.AddSingleton<IDataPathService, DataPathService>();
+    builder.Services.AddSingleton<IFetchResultsService, FetchResultsService>();
 
     builder.Services.AddQuartz(q =>
     {

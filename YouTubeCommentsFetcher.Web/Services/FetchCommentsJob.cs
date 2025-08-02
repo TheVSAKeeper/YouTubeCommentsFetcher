@@ -1,5 +1,4 @@
 ﻿using Quartz;
-using System.Text.Json;
 using YouTubeCommentsFetcher.Web.Models;
 
 namespace YouTubeCommentsFetcher.Web.Services;
@@ -7,14 +6,9 @@ namespace YouTubeCommentsFetcher.Web.Services;
 public class FetchCommentsJob(
     IYouTubeService youTubeService,
     IJobStatusService statusService,
-    IDataPathService dataPathService,
+    IFetchResultsService fetchResultsService,
     ILogger<FetchCommentsJob> logger) : IJob
 {
-    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
-    {
-        WriteIndented = true,
-    };
-
     public async Task Execute(IJobExecutionContext context)
     {
         var dataMap = context.MergedJobDataMap;
@@ -50,11 +44,9 @@ public class FetchCommentsJob(
         model.Comments = model.Videos.SelectMany(v => v.Comments).ToList();
         model.Statistics = Analyzer.Analyze(model.Comments, model.Videos);
 
-        var json = JsonSerializer.Serialize(model, JsonSerializerOptions);
-        var path = dataPathService.GetCommentsFilePath(jobId);
-        await File.WriteAllTextAsync(path, json);
+        await fetchResultsService.SaveFetchResultAsync(jobId, channelId, model);
 
-        logger.LogInformation("Background fetch completed, data saved to {FileName}", path);
+        logger.LogInformation("Background fetch completed, data saved for job {JobId}", jobId);
         statusService.MarkCompleted(jobId);
     }
 }

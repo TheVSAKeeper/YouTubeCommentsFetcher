@@ -1,0 +1,284 @@
+@model FetchResultsIndexViewModel
+
+@{
+    ViewData["Title"] = "Управление результатами выборки";
+}
+
+<div class="container py-4">
+    <h1 class="display-4 mb-4 text-primary">@ViewData["Title"]</h1>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Всего результатов</h6>
+                    <h3 class="card-text">@Model.Statistics.TotalResults</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Всего комментариев</h6>
+                    <h3 class="card-text">@Model.Statistics.TotalComments.ToString("N0")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Общий размер</h6>
+                    <h3 class="card-text">@((Model.Statistics.TotalFileSize / 1024.0 / 1024.0).ToString("F1")) МБ</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center bg-secondary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Средний размер</h6>
+                    <h3 class="card-text">@((Model.Statistics.AverageFileSize / 1024.0).ToString("F0")) КБ</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center @(Model.RunningJobs.Count > 0 ? "bg-warning text-dark" : "bg-light text-muted")">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        @if (Model.RunningJobs.Count > 0)
+                        {
+                            <i class="fas fa-spinner fa-spin me-1"></i>
+                        }
+                        Активные задачи
+                    </h6>
+                    <h3 class="card-text">@Model.RunningJobs.Count</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center bg-dark text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Обновлено</h6>
+                    <small class="card-text">@DateTime.Now.ToString("HH:mm:ss")</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Выполняющиеся задачи -->
+    @if (Model.RunningJobs.Count > 0)
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Выполняющиеся задачи (@Model.RunningJobs.Count)
+                </h5>
+            </div>
+            <div class="card-body">
+                @foreach (RunningJobInfo job in Model.RunningJobs)
+                {
+                    <div class="running-job-item mb-3 p-3 border rounded">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <strong>Задача:</strong> <code>@job.JobId</code><br>
+                                @if (string.IsNullOrEmpty(job.ChannelId) == false)
+                                {
+                                    <small class="text-muted">Канал: @job.ChannelId</small>
+                                }
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Статус:</strong><br>
+                                <small class="text-muted">@job.StatusText</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Время выполнения:</strong><br>
+                                <small class="text-muted">@job.Duration.ToString(@"mm\:ss")</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="progress mb-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                         role="progressbar"
+                                         style="width: @(job.Progress)%"
+                                         aria-valuenow="@job.Progress"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                        @(job.Progress)%
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <a href="@Url.Action("JobQueued", "Home", new { jobId = job.JobId })"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Отслеживать
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Управление -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Управление данными</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Очистка старых данных</h6>
+                    <form asp-action="DeleteOlderThan"
+                          method="post"
+                          class="d-inline"
+                          onsubmit="return confirmDelete(this)">
+                        <div class="input-group">
+                            <input type="number"
+                                   name="days"
+                                   class="form-control"
+                                   placeholder="Количество дней"
+                                   min="1"
+                                   value="30"
+                                   required>
+                            <button type="submit"
+                                    class="btn btn-warning">
+                                <i class="fas fa-trash me-2"></i>Удалить старше
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <h6>Обслуживание</h6>
+                    <form asp-action="RebuildIndex"
+                          method="post"
+                          class="d-inline">
+                        <button type="submit"
+                                class="btn btn-secondary">
+                            <i class="fas fa-sync me-2"></i>Перестроить индекс
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список результатов -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Сохраненные результаты (@Model.Results.Count)</h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Results.Count == 0)
+            {
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>Нет сохраненных результатов</p>
+                    <a asp-controller="Home"
+                       asp-action="Index"
+                       class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Создать первую выборку
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                            <th>Дата создания</th>
+                            <th>ID задачи</th>
+                            <th>Канал</th>
+                            <th>Комментарии</th>
+                            <th>Видео</th>
+                            <th>Авторы</th>
+                            <th>Размер</th>
+                            <th>Действия</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (FetchResultMetadata result in Model.Results)
+                        {
+                            <tr>
+                                <td>
+                                    <small class="text-muted">@result.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                </td>
+                                <td>
+                                    <code>@result.JobId</code>
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrEmpty(result.ChannelName) == false)
+                                    {
+                                        <strong>@result.ChannelName</strong>
+                                        <br>
+                                    }
+                                    <small class="text-muted">@result.ChannelId</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">@result.TotalComments.ToString("N0")</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">@result.TotalVideos</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@result.UniqueAuthors</span>
+                                </td>
+                                <td>
+                                    <small>@((result.FileSize / 1024.0).ToString("F0")) КБ</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm"
+                                         role="group">
+                                        <a asp-controller="Home"
+                                           asp-action="LoadData"
+                                           asp-route-jobId="@result.JobId"
+                                           class="btn btn-outline-primary"
+                                           title="Просмотреть">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <form asp-action="Delete"
+                                              method="post"
+                                              class="d-inline"
+                                              onsubmit="return confirmDeleteSingle('@result.JobId')">
+                                            <input type="hidden"
+                                                   name="jobId"
+                                                   value="@result.JobId">
+                                            <button type="submit"
+                                                    class="btn btn-outline-danger"
+                                                    title="Удалить">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmDelete(form) {
+        const days = form.querySelector('input[name="days"]').value;
+        return confirm(`Вы уверены, что хотите удалить все результаты старше ${days} дней? Это действие нельзя отменить.`);
+    }
+
+    function confirmDeleteSingle(jobId) {
+        return confirm(`Вы уверены, что хотите удалить результат ${jobId}? Это действие нельзя отменить.`);
+    }
+
+    @if (Model.RunningJobs.Count > 0)
+    {
+        <text>;
+            function refreshRunningJobs() {
+                window.location.reload();
+            }
+
+            setInterval(refreshRunningJobs, 5000);
+        </text>
+    }
+</script>

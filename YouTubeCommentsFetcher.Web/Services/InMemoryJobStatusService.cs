@@ -5,9 +5,11 @@ namespace YouTubeCommentsFetcher.Web.Services;
 public interface IJobStatusService
 {
     void Init(string jobId);
+    void Init(string jobId, string? channelId);
     void ReportProgress(string jobId, int percent);
     void MarkCompleted(string jobId);
     JobStatus GetStatus(string jobId);
+    Dictionary<string, JobStatus> GetAllActiveJobs();
 }
 
 public class InMemoryJobStatusService : IJobStatusService
@@ -17,6 +19,11 @@ public class InMemoryJobStatusService : IJobStatusService
     public void Init(string jobId)
     {
         _statuses[jobId] = new(0, false);
+    }
+
+    public void Init(string jobId, string? channelId)
+    {
+        _statuses[jobId] = new(0, false, DateTime.UtcNow, channelId);
     }
 
     public void ReportProgress(string jobId, int percent)
@@ -38,5 +45,12 @@ public class InMemoryJobStatusService : IJobStatusService
         return _statuses.TryGetValue(jobId, out var status)
             ? status
             : new(0, false);
+    }
+
+    public Dictionary<string, JobStatus> GetAllActiveJobs()
+    {
+        return _statuses
+            .Where(kvp => kvp.Value.Completed == false)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 }
