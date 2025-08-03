@@ -19,52 +19,47 @@
         </div>
     }
 
-    <!-- Статус пользователя (скрытый по умолчанию) -->
+    <!-- Статус пользователя -->
     <div id="userStatusCard"
-         class="row mb-4"
+         class="mb-3"
          style="display: none;">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header bg-info text-white">
-                    <h5><i class="fas fa-user me-2"></i>Статус пользователя</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span id="currentUser"
-                                  class="text-muted"></span>
-                            <div id="authStatus"
-                                 class="mt-1"></div>
-                        </div>
-                        <button type="button"
-                                id="showApiKey"
-                                class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-eye me-1"></i>Показать API ключ
-                        </button>
-                    </div>
-                    <div id="apiKeyDetails"
-                         class="mt-3"
-                         style="display: none;">
-                        <div class="row">
-                            <div class="col-md-10">
-                                <label for="apiKey"
-                                       class="form-label">Ваш API ключ:</label>
-                                <input type="text"
-                                       id="apiKey"
-                                       class="form-control"
-                                       readonly
-                                       autocomplete="off">
-                            </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="button"
-                                        id="copyApiKey"
-                                        class="btn btn-outline-secondary w-100">
-                                    <i class="fas fa-copy me-1"></i>Копировать
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-user text-muted me-2"></i>
+                <span id="currentUser"
+                      class="me-3"></span>
+                <div id="authStatus"></div>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="text-muted me-2">API:</span>
+                <input type="text"
+                       id="apiKey"
+                       class="form-control form-control-sm me-2"
+                       style="width: 300px;"
+                       readonly
+                       autocomplete="off">
+                <button type="button"
+                        id="editApiKey"
+                        class="btn btn-outline-primary btn-sm me-1">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button type="button"
+                        id="saveApiKey"
+                        class="btn btn-outline-success btn-sm me-1"
+                        style="display: none;">
+                    <i class="fas fa-save"></i>
+                </button>
+                <button type="button"
+                        id="cancelEditApiKey"
+                        class="btn btn-outline-secondary btn-sm me-1"
+                        style="display: none;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button type="button"
+                        id="copyApiKey"
+                        class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-copy"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -195,14 +190,18 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const apiKeyInput = document.getElementById('apiKey');
-        const showApiKeyButton = document.getElementById('showApiKey');
         const copyApiKeyButton = document.getElementById('copyApiKey');
+        const editApiKeyButton = document.getElementById('editApiKey');
+        const saveApiKeyButton = document.getElementById('saveApiKey');
+        const cancelEditApiKeyButton = document.getElementById('cancelEditApiKey');
         const apiKeyDetails = document.getElementById('apiKeyDetails');
         const currentUserSpan = document.getElementById('currentUser');
         const authStatusDiv = document.getElementById('authStatus');
         const userStatusCard = document.getElementById('userStatusCard');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const functionalCards = document.querySelectorAll('.row.g-4, .row.mt-4');
+
+        let originalApiKey = '';
 
         async function initializeUser() {
             const apiKey = getCookie('apiKey');
@@ -332,15 +331,67 @@
             });
         }
 
-        showApiKeyButton.addEventListener('click', function () {
-            if (apiKeyDetails.style.display === 'none') {
-                apiKeyDetails.style.display = 'block';
-                showApiKeyButton.innerHTML = '<i class="fas fa-eye-slash me-1"></i>Скрыть API ключ';
+        // Обработчики для редактирования API ключа
+        editApiKeyButton.addEventListener('click', function () {
+            originalApiKey = apiKeyInput.value;
+            apiKeyInput.removeAttribute('readonly');
+            apiKeyInput.focus();
+            apiKeyInput.select();
+
+            editApiKeyButton.style.display = 'none';
+            saveApiKeyButton.style.display = 'inline-block';
+            cancelEditApiKeyButton.style.display = 'inline-block';
+            copyApiKeyButton.style.display = 'none';
+        });
+
+        saveApiKeyButton.addEventListener('click', async function () {
+            const newApiKey = apiKeyInput.value.trim();
+
+            if (newApiKey === '') {
+                alert('API ключ не может быть пустым');
+                return;
+            }
+
+            // Проверяем формат GUID
+            const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!guidRegex.test(newApiKey)) {
+                alert('API ключ должен быть в формате GUID');
+                return;
+            }
+
+            // Валидируем новый ключ
+            const isValid = await validateApiKey(newApiKey);
+            if (isValid) {
+                setCookie('apiKey', newApiKey);
+                exitEditMode();
+                showSuccessMessage('API ключ успешно изменен');
             } else {
-                apiKeyDetails.style.display = 'none';
-                showApiKeyButton.innerHTML = '<i class="fas fa-eye me-1"></i>Показать API ключ';
+                alert('Невалидный API ключ');
+                apiKeyInput.value = originalApiKey;
             }
         });
+
+        cancelEditApiKeyButton.addEventListener('click', function () {
+            apiKeyInput.value = originalApiKey;
+            exitEditMode();
+        });
+
+        function exitEditMode() {
+            apiKeyInput.setAttribute('readonly', 'readonly');
+            editApiKeyButton.style.display = 'inline-block';
+            saveApiKeyButton.style.display = 'none';
+            cancelEditApiKeyButton.style.display = 'none';
+            copyApiKeyButton.style.display = 'inline-block';
+        }
+
+        function showSuccessMessage(message) {
+            authStatusDiv.innerHTML = `
+                <div class="alert alert-success alert-sm" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    ${message}
+                </div>
+            `;
+        }
 
         copyApiKeyButton.addEventListener('click', async function () {
             try {
