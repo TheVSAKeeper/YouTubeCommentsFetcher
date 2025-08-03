@@ -59,6 +59,11 @@ public class FetchResultMetadata
     /// Дата самого нового комментария
     /// </summary>
     public DateTime? NewestCommentDate { get; init; }
+
+    /// <summary>
+    /// Идентификатор пользователя, создавшего результат (API ключ)
+    /// </summary>
+    public string? UserId { get; init; }
 }
 
 /// <summary>

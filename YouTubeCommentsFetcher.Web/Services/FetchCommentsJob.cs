@@ -16,6 +16,7 @@ public class FetchCommentsJob(
         var channelId = dataMap.GetString("channelId")!;
         var pageSize = dataMap.GetInt("pageSize");
         var maxPages = dataMap.GetInt("maxPages");
+        var userId = dataMap.GetString("userId");
 
         logger.LogInformation("Background fetch started for channel {ChannelId}", channelId);
 
@@ -44,7 +45,7 @@ public class FetchCommentsJob(
         model.Comments = model.Videos.SelectMany(v => v.Comments).ToList();
         model.Statistics = Analyzer.Analyze(model.Comments, model.Videos);
 
-        await fetchResultsService.SaveFetchResultAsync(jobId, channelId, model);
+        await fetchResultsService.SaveFetchResultAsync(jobId, channelId, model, userId: userId);
 
         logger.LogInformation("Background fetch completed, data saved for job {JobId}", jobId);
         statusService.MarkCompleted(jobId);

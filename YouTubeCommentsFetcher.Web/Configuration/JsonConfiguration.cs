@@ -4,10 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace YouTubeCommentsFetcher.Web.Configuration;
 
-
 public static class JsonConfiguration
 {
-
     public static readonly JsonSerializerOptions Default = new()
     {
         WriteIndented = true,
@@ -15,7 +13,6 @@ public static class JsonConfiguration
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
-
 
     public static readonly JsonSerializerOptions Export = new()
     {

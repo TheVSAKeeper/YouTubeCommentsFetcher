@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Quartz;
 using System.Diagnostics;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using YouTubeCommentsFetcher.Web.Configuration;
@@ -22,6 +24,7 @@ public class HomeController(
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> FetchCommentsBackground(string channelId, int pageSize = 5, int maxPages = 1)
     {
         if (string.IsNullOrEmpty(channelId))
@@ -30,8 +33,16 @@ public class HomeController(
             return RedirectToAction("Index");
         }
 
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            TempData["Error"] = "Пользователь не аутентифицирован.";
+            return RedirectToAction("Index");
+        }
+
         var jobId = Guid.NewGuid().ToString();
-        statusService.Init(jobId, channelId);
+        statusService.Init(jobId, channelId, userId);
 
         var scheduler = await schedulerFactory.GetScheduler();
 
@@ -41,6 +52,7 @@ public class HomeController(
             .UsingJobData("channelId", channelId)
             .UsingJobData("pageSize", pageSize)
             .UsingJobData("maxPages", maxPages)
+            .UsingJobData("userId", userId)
             .Build();
 
         var trigger = TriggerBuilder.Create()
@@ -120,6 +132,7 @@ public class HomeController(
     }
 
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> LoadData(string? jobId)
     {
         if (string.IsNullOrEmpty(jobId))
@@ -127,10 +140,34 @@ public class HomeController(
             return RedirectToAction("Index");
         }
 
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            TempData["Error"] = "Пользователь не аутентифицирован.";
+            return RedirectToAction("Index");
+        }
+
         logger.LogInformation("Начало загрузки данных для задачи: {JobId}", jobId);
 
         try
         {
+            var metadata = await fetchResultsService.GetMetadataAsync(jobId);
+
+            if (metadata == null)
+            {
+                logger.LogWarning("Результат не найден для задачи: {JobId}", jobId);
+                TempData["Error"] = "Файл с результатами не найден";
+                return RedirectToAction("Index");
+            }
+
+            if (metadata.UserId != userId)
+            {
+                logger.LogWarning("Попытка доступа к чужому результату. UserId: {UserId}, JobId: {JobId}", userId, jobId);
+                TempData["Error"] = "Нет прав для просмотра этого результата";
+                return RedirectToAction("Index");
+            }
+
             var model = await fetchResultsService.GetFetchResultAsync(jobId);
 
             if (model == null)

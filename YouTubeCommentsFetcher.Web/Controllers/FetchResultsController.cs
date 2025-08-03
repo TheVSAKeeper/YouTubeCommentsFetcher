@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using YouTubeCommentsFetcher.Web.Models;
 using YouTubeCommentsFetcher.Web.Services;
 
@@ -13,15 +15,24 @@ public class FetchResultsController(
     ILogger<FetchResultsController> logger) : Controller
 {
     /// <summary>
-    /// Страница со списком всех результатов выборки
+    /// Страница со списком результатов выборки текущего пользователя
     /// </summary>
+    [Authorize]
     public async Task<IActionResult> Index()
     {
         try
         {
-            var results = await fetchResultsService.GetAllFetchResultsAsync();
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["Error"] = "Пользователь не аутентифицирован.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            var results = await fetchResultsService.GetUserFetchResultsAsync(userId);
             var statistics = await fetchResultsService.GetStatisticsAsync();
-            var activeJobs = jobStatusService.GetAllActiveJobs();
+            var activeJobs = jobStatusService.GetUserActiveJobs(userId);
 
             var runningJobs = activeJobs.Select(kvp => new RunningJobInfo
                 {
@@ -53,6 +64,7 @@ public class FetchResultsController(
     /// Удалить результат выборки
     /// </summary>
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> Delete(string jobId)
     {
         if (string.IsNullOrWhiteSpace(jobId))
@@ -60,8 +72,27 @@ public class FetchResultsController(
             return BadRequest("Не указан идентификатор задачи");
         }
 
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("Пользователь не аутентифицирован");
+        }
+
         try
         {
+            var metadata = await fetchResultsService.GetMetadataAsync(jobId);
+
+            if (metadata == null)
+            {
+                return NotFound("Результат не найден");
+            }
+
+            if (metadata.UserId != userId)
+            {
+                return Forbid("Нет прав для удаления этого результата");
+            }
+
             var deleted = await fetchResultsService.DeleteFetchResultAsync(jobId);
 
             if (deleted)
@@ -85,9 +116,10 @@ public class FetchResultsController(
     }
 
     /// <summary>
-    /// Удалить результаты старше указанного количества дней
+    /// Удалить результаты старше указанного количества дней (только для текущего пользователя)
     /// </summary>
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> DeleteOlderThan(int days)
     {
         if (days <= 0)
@@ -186,11 +218,19 @@ public class FetchResultsController(
     /// Получить метаданные результата
     /// </summary>
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> GetMetadata(string jobId)
     {
         if (string.IsNullOrWhiteSpace(jobId))
         {
             return BadRequest("Не указан идентификатор задачи");
+        }
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("Пользователь не аутентифицирован");
         }
 
         try
@@ -200,6 +240,11 @@ public class FetchResultsController(
             if (metadata == null)
             {
                 return NotFound("Результат не найден");
+            }
+
+            if (metadata.UserId != userId)
+            {
+                return Forbid("Нет прав для просмотра этого результата");
             }
 
             return Json(metadata);

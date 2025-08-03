@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.FileProviders;
 using Quartz;
@@ -5,6 +6,7 @@ using Quartz.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using System.IO.Compression;
+using YouTubeCommentsFetcher.Web.Authentication;
 using YouTubeCommentsFetcher.Web.Configuration;
 using YouTubeCommentsFetcher.Web.Services;
 using YouTubeService = Google.Apis.YouTube.v3.YouTubeService;
@@ -33,6 +35,11 @@ try
             options.JsonSerializerOptions.DefaultIgnoreCondition = defaultOptions.DefaultIgnoreCondition;
         });
 
+    builder.Services.AddAuthentication("ApiKey")
+        .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>("ApiKey", null);
+
+    builder.Services.AddAuthorization();
+
     builder.Services.AddScoped<YouTubeService>(_ => new(new()
     {
         ApiKey = builder.Configuration["YouTubeApiKey"],
@@ -45,6 +52,7 @@ try
     builder.Services.Configure<DataPathOptions>(builder.Configuration.GetSection(DataPathOptions.SectionName));
     builder.Services.AddSingleton<IDataPathService, DataPathService>();
     builder.Services.AddSingleton<IFetchResultsService, FetchResultsService>();
+    builder.Services.AddSingleton<IApiAuthService, JsonApiAuthService>();
 
     builder.Services.AddQuartz(q =>
     {
@@ -101,6 +109,7 @@ try
 
     app.UseRouting();
 
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");

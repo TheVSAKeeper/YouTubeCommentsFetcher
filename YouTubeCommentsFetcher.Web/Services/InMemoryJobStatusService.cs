@@ -6,10 +6,12 @@ public interface IJobStatusService
 {
     void Init(string jobId);
     void Init(string jobId, string? channelId);
+    void Init(string jobId, string? channelId, string? userId);
     void ReportProgress(string jobId, int percent);
     void MarkCompleted(string jobId);
     JobStatus GetStatus(string jobId);
     Dictionary<string, JobStatus> GetAllActiveJobs();
+    Dictionary<string, JobStatus> GetUserActiveJobs(string userId);
 }
 
 public class InMemoryJobStatusService : IJobStatusService
@@ -24,6 +26,11 @@ public class InMemoryJobStatusService : IJobStatusService
     public void Init(string jobId, string? channelId)
     {
         _statuses[jobId] = new(0, false, DateTime.UtcNow, channelId);
+    }
+
+    public void Init(string jobId, string? channelId, string? userId)
+    {
+        _statuses[jobId] = new(0, false, DateTime.UtcNow, channelId, userId);
     }
 
     public void ReportProgress(string jobId, int percent)
@@ -51,6 +58,18 @@ public class InMemoryJobStatusService : IJobStatusService
     {
         return _statuses
             .Where(kvp => kvp.Value.Completed == false)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+    }
+
+    public Dictionary<string, JobStatus> GetUserActiveJobs(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return new();
+        }
+
+        return _statuses
+            .Where(kvp => kvp.Value.Completed == false && kvp.Value.UserId == userId)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 }
