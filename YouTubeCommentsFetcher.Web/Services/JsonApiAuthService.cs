@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 using YouTubeCommentsFetcher.Web.Configuration;
 using YouTubeCommentsFetcher.Web.Models;
+using YouTubeCommentsFetcher.Web.Options;
 
 namespace YouTubeCommentsFetcher.Web.Services;
 
@@ -40,11 +42,19 @@ public interface IApiAuthService
     /// <param name="apiKey">API ключ</param>
     /// <returns>Пользователь если найден, иначе null</returns>
     Task<ApiUser?> GetUserByApiKeyAsync(string apiKey);
+
+    /// <summary>
+    /// Проверяет, является ли пользователь с данным API ключом администратором
+    /// </summary>
+    /// <param name="apiKey">API ключ для проверки</param>
+    /// <returns>true если пользователь является администратором</returns>
+    bool IsAdminApiKey(string apiKey);
 }
 
 public class JsonApiAuthService(
     IDataPathService dataPathService,
-    ILogger<JsonApiAuthService> logger)
+    ILogger<JsonApiAuthService> logger,
+    IOptions<AdminOptions> adminOptions)
     : IApiAuthService
 {
     private const string UsersFileName = "users.json";
@@ -55,6 +65,19 @@ public class JsonApiAuthService(
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             return null;
+        }
+
+        if (IsAdminApiKey(apiKey))
+        {
+            logger.LogInformation("API ключ валиден для администратора");
+
+            return new()
+            {
+                ApiKey = apiKey,
+                UserName = "Администратор",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+            };
         }
 
         var users = await LoadUsersAsync();
@@ -74,7 +97,25 @@ public class JsonApiAuthService(
 
     public async Task<List<ApiUser>> GetAllUsersAsync()
     {
-        return await LoadUsersAsync();
+        var users = await LoadUsersAsync();
+
+        var adminApiKey = adminOptions.Value.AdminApiKey;
+
+        if (string.IsNullOrWhiteSpace(adminApiKey) == false)
+        {
+            if (users.Any(u => u.ApiKey == adminApiKey) == false)
+            {
+                users.Add(new()
+                {
+                    ApiKey = adminApiKey,
+                    UserName = "Администратор",
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                });
+            }
+        }
+
+        return users;
     }
 
     public async Task<ApiUser?> CreateUserAsync(string userName, string? customApiKey = null)
@@ -145,8 +186,44 @@ public class JsonApiAuthService(
             return null;
         }
 
+        if (IsAdminApiKey(apiKey))
+        {
+            return new()
+            {
+                ApiKey = apiKey,
+                UserName = "Администратор",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+            };
+        }
+
         var users = await LoadUsersAsync();
         return users.FirstOrDefault(u => u.ApiKey == apiKey);
+    }
+
+    public bool IsAdminApiKey(string apiKey)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return false;
+        }
+
+        var adminApiKey = adminOptions.Value.AdminApiKey;
+
+        if (string.IsNullOrWhiteSpace(adminApiKey))
+        {
+            logger.LogWarning("API ключ администратора не настроен в конфигурации");
+            return false;
+        }
+
+        var isAdmin = apiKey == adminApiKey;
+
+        if (isAdmin)
+        {
+            logger.LogInformation("Аутентификация администратора успешна");
+        }
+
+        return isAdmin;
     }
 
     private async Task<List<ApiUser>> LoadUsersAsync()

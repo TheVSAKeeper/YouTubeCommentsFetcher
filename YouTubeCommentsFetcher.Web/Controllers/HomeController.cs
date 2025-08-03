@@ -161,11 +161,19 @@ public class HomeController(
                 return RedirectToAction("Index");
             }
 
-            if (metadata.UserId != userId)
+            var isAdmin = User.HasClaim("IsAdmin", "true");
+
+            if (metadata.UserId != userId && !isAdmin)
             {
                 logger.LogWarning("Попытка доступа к чужому результату. UserId: {UserId}, JobId: {JobId}", userId, jobId);
                 TempData["Error"] = "Нет прав для просмотра этого результата";
                 return RedirectToAction("Index");
+            }
+
+            if (isAdmin && metadata.UserId != userId)
+            {
+                logger.LogInformation("Администратор {AdminUserId} просматривает результат пользователя {OwnerUserId}, JobId: {JobId}",
+                    userId, metadata.UserId, jobId);
             }
 
             var model = await fetchResultsService.GetFetchResultAsync(jobId);

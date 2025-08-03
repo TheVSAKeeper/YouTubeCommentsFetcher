@@ -88,7 +88,9 @@ public class FetchResultsController(
                 return NotFound("Результат не найден");
             }
 
-            if (metadata.UserId != userId)
+            var isAdmin = User.HasClaim("IsAdmin", "true");
+
+            if (metadata.UserId != userId && !isAdmin)
             {
                 return Forbid("Нет прав для удаления этого результата");
             }
@@ -242,7 +244,9 @@ public class FetchResultsController(
                 return NotFound("Результат не найден");
             }
 
-            if (metadata.UserId != userId)
+            var isAdmin = User.HasClaim("IsAdmin", "true");
+
+            if (metadata.UserId != userId && !isAdmin)
             {
                 return Forbid("Нет прав для просмотра этого результата");
             }

@@ -35,13 +35,19 @@ public class ApiKeyAuthenticationHandler(
                 return AuthenticateResult.Fail("Невалидный API ключ");
             }
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.ApiKey),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim("ApiKey", user.ApiKey),
-                new Claim("CreatedAt", user.CreatedAt.ToString("O")),
+                new(ClaimTypes.NameIdentifier, user.ApiKey),
+                new(ClaimTypes.Name, user.UserName),
+                new("ApiKey", user.ApiKey),
+                new("CreatedAt", user.CreatedAt.ToString("O")),
             };
+
+            if (apiAuthService.IsAdminApiKey(apiKey))
+            {
+                claims.Add(new("IsAdmin", "true"));
+                Logger.LogInformation("Пользователь аутентифицирован как администратор: {UserName}", user.UserName);
+            }
 
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);

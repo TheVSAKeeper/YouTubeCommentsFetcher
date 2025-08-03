@@ -1,0 +1,142 @@
+@model AdminAllResultsViewModel
+
+@{
+    ViewData["Title"] = "Административная панель - Все результаты";
+}
+
+<div class="container py-4">
+    <h1 class="display-4 mb-4 text-danger">
+        <i class="fas fa-user-shield me-2"></i>@ViewData["Title"]
+    </h1>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Всего результатов</h6>
+                    <h3 class="card-text">@Model.Statistics.TotalResults</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Всего комментариев</h6>
+                    <h3 class="card-text">@Model.Statistics.TotalComments.ToString("N0")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Общий размер</h6>
+                    <h3 class="card-text">@((Model.Statistics.TotalFileSize / 1024.0 / 1024.0).ToString("F1")) МБ</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="card-title">Пользователей</h6>
+                    <h3 class="card-text">@Model.UserNames.Count</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список результатов -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>Все результаты выборки
+            </h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Results.Count == 0)
+            {
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Результаты выборки отсутствуют.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                            <th>Дата создания</th>
+                            <th>ID задачи</th>
+                            <th>Пользователь</th>
+                            <th>Канал</th>
+                            <th>Комментарии</th>
+                            <th>Видео</th>
+                            <th>Авторы</th>
+                            <th>Размер</th>
+                            <th>Действия</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (FetchResultMetadata result in Model.Results)
+                        {
+                            <tr>
+                                <td>
+                                    <small class="text-muted">@result.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                </td>
+                                <td>
+                                    <code>@result.JobId</code>
+                                </td>
+                                <td>
+                                    @if (Model.UserNames.TryGetValue(result.UserId, out string? userName))
+                                    {
+                                        <strong>@userName</strong>
+                                        <br>
+                                        <small class="text-muted">@result.UserId</small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">@result.UserId</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrEmpty(result.ChannelName) == false)
+                                    {
+                                        <strong>@result.ChannelName</strong>
+                                        <br>
+                                    }
+                                    <small class="text-muted">@result.ChannelId</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">@result.TotalComments.ToString("N0")</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">@result.TotalVideos</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@result.UniqueAuthors</span>
+                                </td>
+                                <td>
+                                    <small>@((result.FileSize / 1024.0).ToString("F0")) КБ</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm"
+                                         role="group">
+                                        <a asp-controller="Home"
+                                           asp-action="LoadData"
+                                           asp-route-jobId="@result.JobId"
+                                           class="btn btn-outline-primary"
+                                           title="Просмотреть">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

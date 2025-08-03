@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.Extensions.FileProviders;
 using Quartz;
 using Quartz.AspNetCore;
 using Serilog;
@@ -8,6 +7,7 @@ using Serilog.Events;
 using System.IO.Compression;
 using YouTubeCommentsFetcher.Web.Authentication;
 using YouTubeCommentsFetcher.Web.Configuration;
+using YouTubeCommentsFetcher.Web.Options;
 using YouTubeCommentsFetcher.Web.Services;
 using YouTubeService = Google.Apis.YouTube.v3.YouTubeService;
 
@@ -50,6 +50,7 @@ try
     builder.Services.AddSingleton<IJobStatusService, InMemoryJobStatusService>();
 
     builder.Services.Configure<DataPathOptions>(builder.Configuration.GetSection(DataPathOptions.SectionName));
+    builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("AdminSettings"));
     builder.Services.AddSingleton<IDataPathService, DataPathService>();
     builder.Services.AddSingleton<IFetchResultsService, FetchResultsService>();
     builder.Services.AddSingleton<IApiAuthService, JsonApiAuthService>();
@@ -100,12 +101,6 @@ try
 
     var dataPathService = app.Services.GetRequiredService<IDataPathService>();
     dataPathService.EnsureDataDirectoryExists();
-
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new PhysicalFileProvider(dataPathService.GetAbsoluteDataDirectory()),
-        RequestPath = $"/{dataPathService.RelativeDataDirectory}",
-    });
 
     app.UseRouting();
 
