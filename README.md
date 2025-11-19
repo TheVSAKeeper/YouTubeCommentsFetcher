@@ -25,7 +25,7 @@ JSON-файлы и предоставляет удобный интерфейс 
 
 | Компонент       | Технология                                                            |
 |-----------------|-----------------------------------------------------------------------|
-| Веб-фреймворк   | [ASP.NET Core 9.0](https://dotnet.microsoft.com/platform/aspnet-core) |
+| Веб-фреймворк   | [ASP.NET Core 10.0](https://dotnet.microsoft.com/platform/aspnet-core) |
 | API YouTube     | [Google.Apis.YouTube.v3](https://developers.google.com/youtube/v3)    |
 | Фоновые задачи  | [Quartz.NET](https://www.quartz-scheduler.net/)                       |
 | Логирование     | [Serilog](https://serilog.net/)                                       |
