@@ -62,6 +62,51 @@
 
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user me-2"></i>Статистика по автору</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="authorSelect"
+                               class="form-label">Выберите никнейм</label>
+                        <select id="authorSelect"
+                                class="form-select">
+                            <option value="">— Выберите автора —</option>
+                        </select>
+                    </div>
+                    <div id="authorStatsContainer"
+                         style="display:none">
+                        <dl class="stats-grid">
+                            <div class="stat-item">
+                                <dt>Всего сообщений</dt>
+                                <dd><span id="authorTotalMessages">0</span></dd>
+                            </div>
+                            <div class="stat-item">
+                                <dt>Всего лайков</dt>
+                                <dd><span id="authorTotalLikes">0</span></dd>
+                            </div>
+                            <div class="stat-item">
+                                <dt>Видео с участием</dt>
+                                <dd><span id="authorVideosCount">0</span></dd>
+                            </div>
+                            <div class="stat-item">
+                                <dt>Период активности</dt>
+                                <dd><span id="authorPeriod"></span></dd>
+                            </div>
+                        </dl>
+                    </div>
+                    <div id="authorStatsPlaceholder"
+                         class="text-muted">
+                        Выберите автора, чтобы увидеть статистику.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0"><i class="fas fa-fire me-2"></i>Популярное</h5>
                 </div>
@@ -91,10 +136,8 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
+        <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><i class="fas fa-users me-2"></i>Топ авторов (комментарии)</h5>
@@ -113,7 +156,9 @@
                 </div>
             </div>
         </div>
+    </div>
 
+    <div class="row g-4 mb-5">
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-info text-white">
@@ -153,9 +198,7 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-4 mb-5">
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-warning text-dark">
@@ -169,7 +212,9 @@
                 </div>
             </div>
         </div>
+    </div>
 
+    <div class="row g-4 mb-5">
         <div class="col-md-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-warning text-dark">
@@ -316,6 +361,22 @@
             <div class="comments-list">
                 @foreach (Comment comment in Model.Comments)
                 {
+                    VideoComments? videoForComment = Model.Videos.FirstOrDefault(v => v.Comments.Any(x => x.PublishedAt == comment.PublishedAt && x.AuthorDisplayName == comment.AuthorDisplayName));
+                    string scrollTargetId = null;
+                    string videoId = null;
+
+                    if (videoForComment != null && !string.IsNullOrEmpty(videoForComment.VideoId))
+                    {
+                        int videoIndex = Model.Videos.IndexOf(videoForComment);
+                        int commentIndex = videoForComment.Comments.FindIndex(x => x.PublishedAt == comment.PublishedAt && x.AuthorDisplayName == comment.AuthorDisplayName);
+
+                        if (videoIndex >= 0 && commentIndex >= 0)
+                        {
+                            scrollTargetId = $"video-comment-{videoIndex}-{commentIndex}";
+                            videoId = videoForComment.VideoId;
+                        }
+                    }
+
                     <div class="comment-item mb-4">
                         <div class="comment-header d-flex align-items-center mb-2">
                             <i class="fas fa-user-circle me-2 fa-lg text-muted"></i>
@@ -328,6 +389,14 @@
                                 <small class="text-muted ms-2">
                                     @comment.PublishedAt.Value.ToString("dd.MM.yy HH:mm")
                                 </small>
+                                @if (!string.IsNullOrEmpty(scrollTargetId) && !string.IsNullOrEmpty(videoId))
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm ms-2"
+                                            onclick="scrollToVideoComment('@scrollTargetId', '@videoId')">
+                                        <i class="fas fa-link me-1"></i>К комментарию в блоке видео
+                                    </button>
+                                }
                             </div>
 
                         </div>
@@ -364,7 +433,8 @@
         </div>
     </div>
 
-    <div id="video-comments-section" class="card shadow-sm mb-5">
+    <div id="video-comments-section"
+         class="card shadow-sm mb-5">
         <div class="card-header bg-secondary text-white">
             <h5 class="mb-0"><i class="fas fa-list-ol me-2"></i>Комментарии по видео</h5>
         </div>
@@ -398,7 +468,12 @@
                                 <ul class="list-unstyled">
                                     @foreach (Comment comment in video.Comments)
                                     {
-                                        <li class="mb-3">
+                                        int videoIndex = Model.Videos.IndexOf(video);
+                                        int commentIndex = video.Comments.IndexOf(comment);
+                                        string commentAnchorId = $"video-comment-{videoIndex}-{commentIndex}";
+
+                                        <li id="@commentAnchorId"
+                                            class="mb-3">
                                             <div class="comment-header d-flex align-items-center mb-2">
                                                 <i class="fas fa-user-circle me-2 fa-sm text-muted"></i>
                                                 <strong>@comment.AuthorDisplayName</strong>
@@ -555,6 +630,11 @@
         padding-bottom: 1rem;
     }
 
+    .comment-highlight {
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.3);
+        border-radius: 8px;
+    }
+
     .comment-header small {
         font-size: 0.8rem;
     }
@@ -622,8 +702,11 @@
 </style>
 
 <script>
+    const commentsModel = @Json.Serialize(Model);
+    let authorStatsIndex = null;
+
     function saveData() {
-        const model = @Json.Serialize(Model);
+        const model = commentsModel;
 
         fetch('@Url.Action("SaveData")', {
             method: 'POST',
@@ -657,4 +740,183 @@
             });
         }
     }
+
+    function scrollToVideoComment(commentId, videoId) {
+        if (!commentId || !videoId) {
+            return;
+        }
+
+        const accordionButton = document.querySelector(
+            '#video-comments-section button.accordion-button[data-bs-target="#video-' + videoId + '"]'
+        );
+
+        if (accordionButton && accordionButton.classList.contains('collapsed')) {
+            accordionButton.click();
+        }
+
+        setTimeout(function () {
+            const commentElement = document.getElementById(commentId);
+            if (!commentElement) {
+                return;
+            }
+
+            commentElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            const highlightTarget = commentElement.querySelector('.comment-body') || commentElement;
+
+            highlightTarget.classList.add('comment-highlight');
+            setTimeout(function () {
+                highlightTarget.classList.remove('comment-highlight');
+            }, 1500);
+        }, 200);
+    }
+
+    function initAuthorStats() {
+        if (!commentsModel || !Array.isArray(commentsModel.videos)) {
+            return;
+        }
+
+        const select = document.getElementById('authorSelect');
+        if (!select) {
+            return;
+        }
+
+        authorStatsIndex = buildAuthorStatsIndex(commentsModel);
+        const authors = Array.from(authorStatsIndex.values())
+            .sort((a, b) => {
+                if (b.totalMessages !== a.totalMessages) {
+                    return b.totalMessages - a.totalMessages;
+                }
+                return a.name.localeCompare(b.name);
+            });
+
+        authors.forEach(author => {
+            const option = document.createElement('option');
+            option.value = author.name;
+            option.textContent = author.name + ' (' + author.totalMessages + ')';
+            select.appendChild(option);
+        });
+
+        select.addEventListener('change', function () {
+            updateAuthorStats(this.value);
+        });
+    }
+
+    function buildAuthorStatsIndex(model) {
+        const index = new Map();
+        if (!model || !Array.isArray(model.videos)) {
+            return index;
+        }
+
+        model.videos.forEach(video => {
+            if (!video || !Array.isArray(video.comments)) {
+                return;
+            }
+
+            const videoId = video.videoId;
+
+            video.comments.forEach(comment => {
+                processEntry(comment, videoId);
+                if (Array.isArray(comment.replies)) {
+                    comment.replies.forEach(reply => processEntry(reply, videoId));
+                }
+            });
+        });
+
+        function processEntry(comment, videoId) {
+            if (!comment || !comment.authorDisplayName) {
+                return;
+            }
+
+            const name = comment.authorDisplayName;
+            let stat = index.get(name);
+            if (!stat) {
+                stat = {
+                    name,
+                    totalMessages: 0,
+                    totalLikes: 0,
+                    firstDate: null,
+                    lastDate: null,
+                    videos: new Set()
+                };
+                index.set(name, stat);
+            }
+
+            stat.totalMessages += 1;
+            stat.totalLikes += comment.likeCount || 0;
+
+            if (comment.publishedAt) {
+                const date = new Date(comment.publishedAt);
+                if (!stat.firstDate || date < stat.firstDate) {
+                    stat.firstDate = date;
+                }
+                if (!stat.lastDate || date > stat.lastDate) {
+                    stat.lastDate = date;
+                }
+            }
+
+            if (videoId) {
+                stat.videos.add(videoId);
+            }
+        }
+
+        return index;
+    }
+
+    function updateAuthorStats(authorName) {
+        const container = document.getElementById('authorStatsContainer');
+        const placeholder = document.getElementById('authorStatsPlaceholder');
+
+        if (!container || !placeholder || !authorStatsIndex) {
+            return;
+        }
+
+        if (!authorName) {
+            container.style.display = 'none';
+            placeholder.style.display = 'block';
+            return;
+        }
+
+        const stat = authorStatsIndex.get(authorName);
+        if (!stat) {
+            container.style.display = 'none';
+            placeholder.style.display = 'block';
+            return;
+        }
+
+        const totalMessagesEl = document.getElementById('authorTotalMessages');
+        const totalLikesEl = document.getElementById('authorTotalLikes');
+        const videosCountEl = document.getElementById('authorVideosCount');
+        const periodEl = document.getElementById('authorPeriod');
+
+        if (totalMessagesEl) {
+            totalMessagesEl.textContent = stat.totalMessages.toString();
+        }
+        if (totalLikesEl) {
+            totalLikesEl.textContent = stat.totalLikes.toString();
+        }
+        if (videosCountEl) {
+            videosCountEl.textContent = stat.videos.size.toString();
+        }
+        if (periodEl) {
+            if (stat.firstDate && stat.lastDate) {
+                const formatter = new Intl.DateTimeFormat('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit'
+                });
+                periodEl.textContent = formatter.format(stat.firstDate) + ' — ' + formatter.format(stat.lastDate);
+            } else {
+                periodEl.textContent = '';
+            }
+        }
+
+        container.style.display = 'block';
+        placeholder.style.display = 'none';
+    }
+
+    window.addEventListener('DOMContentLoaded', initAuthorStats);
 </script>
