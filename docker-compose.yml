@@ -1,9 +1,8 @@
 services:
-  youtube-comments-fetcher:
+  youtubecommentsfetcher:
     image: thevsakeeper/youtubecommentsfetcherweb:latest
+    container_name: youtubecommentsfetcher
     pull_policy: always
-    env_file:
-      - .env
     environment:
       YouTubeApiKey: ${YCF_YOUTUBE_API_KEY}
       AdminSettings__AdminApiKey: ${YCF_ADMIN_API_KEY}
