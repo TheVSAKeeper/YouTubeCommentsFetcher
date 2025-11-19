@@ -1,11 +1,7 @@
-version: "3.9"
-
 services:
   youtube-comments-fetcher:
-    build:
-      context: .
-      dockerfile: YouTubeCommentsFetcher.Web/Dockerfile
-    image: youtube-comments-fetcher:latest
+    image: thevsakeeper/youtubecommentsfetcherweb:latest
+    pull_policy: always
     env_file:
       - .env
     environment:
