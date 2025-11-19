@@ -2,9 +2,9 @@ namespace YouTubeCommentsFetcher.Web.Models;
 
 public class VideoComments
 {
-    public required string VideoTitle { get; init; }
-    public required string VideoUrl { get; init; }
-    public required string ThumbnailUrl { get; init; }
-    public required string VideoId { get; init; }
-    public required List<Comment> Comments { get; init; }
+    public string VideoTitle { get; init; }
+    public string VideoUrl { get; init; }
+    public string ThumbnailUrl { get; init; }
+    public string VideoId { get; init; }
+    public List<Comment> Comments { get; init; }
 }
