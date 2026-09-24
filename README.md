@@ -1,4 +1,4 @@
-# YouTube Comments Fetcher
+﻿# YouTube Comments Fetcher
 
 [![Docker Image](https://img.shields.io/docker/pulls/thevsakeeper/youtubecommentsfetcherweb)](https://hub.docker.com/r/thevsakeeper/youtubecommentsfetcherweb)
 [![CI/CD Status](https://github.com/TheVSAKeeper/YouTubeCommentsFetcher/actions/workflows/docker-image.yml/badge.svg )](https://github.com/TheVSAKeeper/YouTubeCommentsFetcher/actions/workflows/docker-image.yml )
@@ -187,6 +187,47 @@ docker run -p 8080:8080 -e YouTubeApiKey=ваш_ключ_API thevsakeeper/youtub
 4. Нажмите **Загрузить данные**.
 
 После загрузки вы попадете на страницу результатов с этими данными.
+
+---
+
+## ⌨️ Консольный клиент (CLI)
+
+`YouTubeCommentsFetcher.Cli` собирает и просматривает комментарии без веб-интерфейса, тем же кодом
+(`YouTubeCommentsFetcher.Core`), что и Web.
+
+Запуск из корня репозитория:
+
+```bash
+dotnet run --project YouTubeCommentsFetcher.Cli -- <команда> [аргументы]
+```
+
+Команды:
+
+- `fetch <channel> --user <имя> [--max-pages N]` – собрать комментарии канала и сохранить результат
+  за указанным пользователем. `--max-pages` – от 1 до 100 страниц плейлиста загрузок по 50 видео
+  (по умолчанию 1).
+- `list [--user <имя>]` – показать сохранённые результаты, при `--user` – только его результаты.
+- `stats <result>` – показать статистику авторов и топы сохранённого результата (идентификатор –
+  из первой колонки вывода `list`).
+
+Общий для всех команд ключ `--data-path <каталог>` задаёт каталог данных; без него берётся настройка
+`DataPath:DataDirectory` (по умолчанию `YouTubeCommentsFetcher.Web/Data`) относительно текущего
+каталога – при запуске из корня репозитория это тот же каталог, что использует Web.
+
+Ключ YouTube API берётся из тех же user-secrets, что у Web (`YouTubeApiKey`), либо из переменной
+окружения `YouTubeApiKey`; аргументом командной строки не передаётся:
+
+```bash
+dotnet user-secrets set "YouTubeApiKey" "ваш_ключ_API" --project YouTubeCommentsFetcher.Web
+```
+
+Коды выхода `fetch`: `0` – готово, `1` – сбой, `2` – результат сохранён, но неполный (сбор
+остановился из-за квоты или ошибки, собранное сохранено).
+
+CLI и Web могут работать с одним каталогом данных одновременно: индекс результатов пишется под
+блокировкой через файл `fetch_results_index.json.lock`. Исключение – CLI на Windows при Web в
+Linux-контейнере с каталогом данных на bind-томе Docker Desktop: блокировка между ними не действует,
+и одновременные сборы в таком раскладе не запускать.
 
 ---
 
