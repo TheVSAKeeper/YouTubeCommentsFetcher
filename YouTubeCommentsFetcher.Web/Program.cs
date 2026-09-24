@@ -1,15 +1,14 @@
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Quartz;
 using Quartz.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using System.IO.Compression;
+using YouTubeCommentsFetcher.Core;
+using YouTubeCommentsFetcher.Core.Configuration;
+using YouTubeCommentsFetcher.Core.Services;
 using YouTubeCommentsFetcher.Web.Authentication;
-using YouTubeCommentsFetcher.Web.Configuration;
-using YouTubeCommentsFetcher.Web.Options;
-using YouTubeCommentsFetcher.Web.Services;
-using YouTubeService = Google.Apis.YouTube.v3.YouTubeService;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -44,20 +43,7 @@ try
 
     builder.Services.AddAuthorization();
 
-    builder.Services.AddScoped<YouTubeService>(_ => new(new()
-    {
-        ApiKey = builder.Configuration["YouTubeApiKey"],
-        ApplicationName = "YouTubeCommentsFetcher",
-    }));
-
-    builder.Services.AddScoped<IYouTubeService, YouTubeCommentsFetcher.Web.Services.YouTubeService>();
-    builder.Services.AddSingleton<IJobStatusService, InMemoryJobStatusService>();
-
-    builder.Services.Configure<DataPathOptions>(builder.Configuration.GetSection(DataPathOptions.SectionName));
-    builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("AdminSettings"));
-    builder.Services.AddSingleton<IDataPathService, DataPathService>();
-    builder.Services.AddSingleton<IFetchResultsService, FetchResultsService>();
-    builder.Services.AddSingleton<IApiAuthService, JsonApiAuthService>();
+    builder.Services.AddYouTubeCommentsCore(builder.Configuration);
 
     builder.Services.AddQuartz(q =>
     {

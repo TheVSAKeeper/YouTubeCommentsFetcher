@@ -8,15 +8,58 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YouTubeCommentsFetcher.Core", "YouTubeCommentsFetcher.Core\YouTubeCommentsFetcher.Core.csproj", "{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YouTubeCommentsFetcher.Cli", "YouTubeCommentsFetcher.Cli\YouTubeCommentsFetcher.Cli.csproj", "{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Debug|x64.Build.0 = Debug|Any CPU
+		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Debug|x86.Build.0 = Debug|Any CPU
 		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Release|x64.ActiveCfg = Release|Any CPU
+		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Release|x64.Build.0 = Release|Any CPU
+		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Release|x86.ActiveCfg = Release|Any CPU
+		{5A214BF5-B62A-4D14-8E44-9A53BB4FF079}.Release|x86.Build.0 = Release|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Debug|x64.Build.0 = Debug|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Debug|x86.Build.0 = Debug|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Release|x64.ActiveCfg = Release|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Release|x64.Build.0 = Release|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Release|x86.ActiveCfg = Release|Any CPU
+		{846FE80F-AC2F-4808-9BD2-F73BD61A57B3}.Release|x86.Build.0 = Release|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Debug|x64.Build.0 = Debug|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Debug|x86.Build.0 = Debug|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Release|x64.ActiveCfg = Release|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Release|x64.Build.0 = Release|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Release|x86.ActiveCfg = Release|Any CPU
+		{B5FEDCEA-EFAA-4FD7-B61C-3999A09EC057}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

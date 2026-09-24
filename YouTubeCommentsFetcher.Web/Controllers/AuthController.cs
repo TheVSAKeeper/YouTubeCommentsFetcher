@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
-using YouTubeCommentsFetcher.Web.Services;
+﻿using Microsoft.AspNetCore.Mvc;
+using YouTubeCommentsFetcher.Core.Services;
 
 namespace YouTubeCommentsFetcher.Web.Controllers;
 

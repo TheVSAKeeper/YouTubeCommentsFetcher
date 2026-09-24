@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using YouTubeCommentsFetcher.Core.Services;
 using YouTubeCommentsFetcher.Web.Models;
-using YouTubeCommentsFetcher.Web.Services;
 
 namespace YouTubeCommentsFetcher.Web.Controllers;
 

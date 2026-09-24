@@ -1,3 +1,5 @@
+﻿using YouTubeCommentsFetcher.Core.Models;
+
 namespace YouTubeCommentsFetcher.Web.Models;
 
 /// <summary>

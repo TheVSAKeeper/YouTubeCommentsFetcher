@@ -5,7 +5,9 @@ using System.Diagnostics;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using YouTubeCommentsFetcher.Web.Configuration;
+using YouTubeCommentsFetcher.Core.Configuration;
+using YouTubeCommentsFetcher.Core.Models;
+using YouTubeCommentsFetcher.Core.Services;
 using YouTubeCommentsFetcher.Web.Models;
 using YouTubeCommentsFetcher.Web.Services;
 
@@ -18,8 +20,6 @@ public class HomeController(
     IFetchResultsService fetchResultsService,
     ILogger<HomeController> logger) : Controller
 {
-    private const int MaxPlaylistPages = 100;
-
     public IActionResult Index()
     {
         return View();
@@ -45,7 +45,7 @@ public class HomeController(
             return RedirectToAction("Index");
         }
 
-        maxPages = Math.Clamp(maxPages, 1, MaxPlaylistPages);
+        maxPages = Math.Clamp(maxPages, 1, CommentsFetcher.MaxPlaylistPages);
 
         var jobId = Guid.NewGuid().ToString();
         var runningJobId = statusService.StartOrGetRunning(jobId, channelId, userId, maxPages);
