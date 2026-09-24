@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using YouTubeCommentsFetcher.Web.Configuration;
 using YouTubeCommentsFetcher.Web.Models;
@@ -105,14 +107,18 @@ public interface IFetchResultsService
 /// </summary>
 public class FetchResultsService : IFetchResultsService
 {
+    private const string LegacyUserId = "00000000-0000-0000-0000-000000000000"; // Legacy user для существующих данных
+
     private readonly IDataPathService _dataPathService;
+    private readonly IApiAuthService _apiAuthService;
     private readonly ILogger<FetchResultsService> _logger;
     private readonly ConcurrentDictionary<string, FetchResultMetadata> _metadataIndex;
     private readonly SemaphoreSlim _indexLock;
 
-    public FetchResultsService(IDataPathService dataPathService, ILogger<FetchResultsService> logger)
+    public FetchResultsService(IDataPathService dataPathService, IApiAuthService apiAuthService, ILogger<FetchResultsService> logger)
     {
         _dataPathService = dataPathService;
+        _apiAuthService = apiAuthService;
         _logger = logger;
         _metadataIndex = new();
         _indexLock = new(1, 1);
@@ -147,6 +153,9 @@ public class FetchResultsService : IFetchResultsService
         _logger.LogInformation("Сохранение результата выборки для задачи {JobId}", jobId);
 
         model.IsIncomplete = isIncomplete;
+        model.ChannelId = channelId;
+        model.ChannelName = channelName;
+        model.OwnerKeyHash = string.IsNullOrWhiteSpace(userId) ? null : HashApiKey(userId);
         var json = JsonSerializer.Serialize(model, JsonConfiguration.Default);
         var filePath = _dataPathService.GetAbsoluteCommentsFilePath(jobId);
 
@@ -187,32 +196,14 @@ public class FetchResultsService : IFetchResultsService
 
     public async Task<YouTubeCommentsViewModel?> GetFetchResultAsync(string jobId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(jobId))
+        var model = await ReadFetchResultFileAsync(jobId, cancellationToken);
+
+        if (model != null)
         {
-            return null;
+            model.OwnerKeyHash = null;
         }
 
-        var filePath = _dataPathService.GetAbsoluteCommentsFilePath(jobId);
-
-        if (!File.Exists(filePath))
-        {
-            _logger.LogWarning("Файл результата не найден для задачи {JobId}: {FilePath}", jobId, filePath);
-            return null;
-        }
-
-        try
-        {
-            var json = await File.ReadAllTextAsync(filePath, cancellationToken);
-            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json, JsonConfiguration.Default);
-
-            _logger.LogInformation("Результат выборки загружен для задачи {JobId}", jobId);
-            return model;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при загрузке результата выборки для задачи {JobId}", jobId);
-            return null;
-        }
+        return model;
     }
 
     public async Task<FetchResultMetadata?> GetMetadataAsync(string jobId, CancellationToken cancellationToken = default)
@@ -233,33 +224,19 @@ public class FetchResultsService : IFetchResultsService
         {
             try
             {
-                var model = await GetFetchResultAsync(jobId, cancellationToken);
+                var model = await ReadFetchResultFileAsync(jobId, cancellationToken);
 
                 if (model != null)
                 {
-                    var fileInfo = new FileInfo(filePath);
+                    var ownerUserId = ResolveOwnerUserId(model.OwnerKeyHash, await LoadOwnerKeysAsync());
 
-                    metadata = new()
+                    if (ownerUserId == null)
                     {
-                        JobId = jobId,
-                        ChannelId = "unknown",
-                        ChannelName = null,
-                        CreatedAt = fileInfo.CreationTimeUtc,
-                        TotalComments = model.Comments.Count,
-                        TotalVideos = model.Videos.Count,
-                        UniqueAuthors = model.Comments.Select(c => c.AuthorDisplayName).Distinct().Count(),
-                        FilePath = _dataPathService.GetCommentsFilePath(jobId),
-                        FileSize = fileInfo.Length,
-                        OldestCommentDate = model.Comments.Where(c => c.PublishedAt.HasValue)
-                            .MinBy(c => c.PublishedAt)
-                            ?.PublishedAt,
-                        NewestCommentDate = model.Comments.Where(c => c.PublishedAt.HasValue)
-                            .MaxBy(c => c.PublishedAt)
-                            ?.PublishedAt,
-                        UserId = "00000000-0000-0000-0000-000000000000", // Legacy user для существующих данных
-                        IsIncomplete = model.IsIncomplete,
-                    };
+                        _logger.LogWarning("Владелец результата {JobId} не определен: файл пользователей отсутствует или не прочитан, метаданные не выданы", jobId);
+                        return null;
+                    }
 
+                    metadata = CreateMetadataFromFile(jobId, filePath, model, ownerUserId);
                     _metadataIndex.TryAdd(jobId, metadata);
                     await SaveIndexAsync(cancellationToken);
                     return metadata;
@@ -461,11 +438,13 @@ public class FetchResultsService : IFetchResultsService
                             {
                                 _logger.LogInformation("Найдено {MissingCount} файлов, отсутствующих в индексе. Выполняется обновление индекса", missingFiles.Count);
 
+                                var ownerKeys = await LoadOwnerKeysAsync();
+
                                 foreach (var jobId in missingFiles)
                                 {
                                     try
                                     {
-                                        await CreateMetadataForExistingFileAsync(jobId, cancellationToken);
+                                        await CreateMetadataForExistingFileAsync(jobId, ownerKeys, cancellationToken);
                                     }
                                     catch (Exception ex)
                                     {
@@ -548,6 +527,7 @@ public class FetchResultsService : IFetchResultsService
 
         var pattern = "comments_*.json";
         var files = Directory.GetFiles(dataDirectory, pattern);
+        var ownerKeys = await LoadOwnerKeysAsync();
 
         var processedCount = 0;
 
@@ -560,7 +540,7 @@ public class FetchResultsService : IFetchResultsService
                 if (fileName.StartsWith("comments_") && fileName.EndsWith(".json"))
                 {
                     var jobId = fileName.Substring(9, fileName.Length - 14);
-                    await CreateMetadataForExistingFileAsync(jobId, cancellationToken);
+                    await CreateMetadataForExistingFileAsync(jobId, ownerKeys, cancellationToken);
                     processedCount++;
                 }
             }
@@ -574,7 +554,40 @@ public class FetchResultsService : IFetchResultsService
         _logger.LogInformation("Автоматическая перестройка индекса завершена. Обработано файлов: {ProcessedCount}", processedCount);
     }
 
-    private async Task CreateMetadataForExistingFileAsync(string jobId, CancellationToken cancellationToken = default)
+    private async Task<YouTubeCommentsViewModel?> ReadFetchResultFileAsync(string jobId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(jobId))
+        {
+            return null;
+        }
+
+        var filePath = _dataPathService.GetAbsoluteCommentsFilePath(jobId);
+
+        if (!File.Exists(filePath))
+        {
+            _logger.LogWarning("Файл результата не найден для задачи {JobId}: {FilePath}", jobId, filePath);
+            return null;
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(filePath, cancellationToken);
+            var model = JsonSerializer.Deserialize<YouTubeCommentsViewModel>(json, JsonConfiguration.Default);
+
+            _logger.LogInformation("Результат выборки загружен для задачи {JobId}", jobId);
+            return model;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при загрузке результата выборки для задачи {JobId}", jobId);
+            return null;
+        }
+    }
+
+    private async Task CreateMetadataForExistingFileAsync(
+        string jobId,
+        OwnerKeys ownerKeys,
+        CancellationToken cancellationToken = default)
     {
         var filePath = _dataPathService.GetAbsoluteCommentsFilePath(jobId);
 
@@ -586,32 +599,19 @@ public class FetchResultsService : IFetchResultsService
 
         try
         {
-            var model = await GetFetchResultAsync(jobId, cancellationToken);
+            var model = await ReadFetchResultFileAsync(jobId, cancellationToken);
 
             if (model != null)
             {
-                var fileInfo = new FileInfo(filePath);
+                var ownerUserId = ResolveOwnerUserId(model.OwnerKeyHash, ownerKeys);
 
-                var metadata = new FetchResultMetadata
+                if (ownerUserId == null)
                 {
-                    JobId = jobId,
-                    ChannelId = "unknown",
-                    ChannelName = null,
-                    CreatedAt = fileInfo.CreationTimeUtc,
-                    TotalComments = model.Comments.Count,
-                    TotalVideos = model.Videos.Count,
-                    UniqueAuthors = model.Comments.Select(c => c.AuthorDisplayName).Distinct().Count(),
-                    FilePath = _dataPathService.GetCommentsFilePath(jobId),
-                    FileSize = fileInfo.Length,
-                    OldestCommentDate = model.Comments.Where(c => c.PublishedAt.HasValue)
-                        .MinBy(c => c.PublishedAt)
-                        ?.PublishedAt,
-                    NewestCommentDate = model.Comments.Where(c => c.PublishedAt.HasValue)
-                        .MaxBy(c => c.PublishedAt)
-                        ?.PublishedAt,
-                    UserId = "00000000-0000-0000-0000-000000000000", // Legacy user для существующих данных
-                    IsIncomplete = model.IsIncomplete,
-                };
+                    _logger.LogWarning("Владелец результата {JobId} не определен: файл пользователей отсутствует или не прочитан, файл не добавлен в индекс", jobId);
+                    return;
+                }
+
+                var metadata = CreateMetadataFromFile(jobId, filePath, model, ownerUserId);
 
                 _metadataIndex.TryAdd(jobId, metadata);
                 _logger.LogDebug("Созданы метаданные для существующего файла: {JobId}", jobId);
@@ -622,4 +622,68 @@ public class FetchResultsService : IFetchResultsService
             _logger.LogError(ex, "Ошибка при создании метаданных для файла {JobId}", jobId);
         }
     }
+
+    private FetchResultMetadata CreateMetadataFromFile(
+        string jobId,
+        string filePath,
+        YouTubeCommentsViewModel model,
+        string ownerUserId)
+    {
+        var fileInfo = new FileInfo(filePath);
+
+        return new()
+        {
+            JobId = jobId,
+            ChannelId = string.IsNullOrWhiteSpace(model.ChannelId) ? "unknown" : model.ChannelId,
+            ChannelName = model.ChannelName,
+            CreatedAt = fileInfo.CreationTimeUtc,
+            TotalComments = model.Comments.Count,
+            TotalVideos = model.Videos.Count,
+            UniqueAuthors = model.Comments.Select(c => c.AuthorDisplayName).Distinct().Count(),
+            FilePath = _dataPathService.GetCommentsFilePath(jobId),
+            FileSize = fileInfo.Length,
+            OldestCommentDate = model.Comments.Where(c => c.PublishedAt.HasValue)
+                .MinBy(c => c.PublishedAt)
+                ?.PublishedAt,
+            NewestCommentDate = model.Comments.Where(c => c.PublishedAt.HasValue)
+                .MaxBy(c => c.PublishedAt)
+                ?.PublishedAt,
+            UserId = ownerUserId,
+            IsIncomplete = model.IsIncomplete,
+        };
+    }
+
+    private static string? ResolveOwnerUserId(string? ownerKeyHash, OwnerKeys ownerKeys)
+    {
+        if (string.IsNullOrWhiteSpace(ownerKeyHash))
+        {
+            return LegacyUserId;
+        }
+
+        if (ownerKeys.KeysByHash.TryGetValue(ownerKeyHash, out var apiKey))
+        {
+            return apiKey;
+        }
+
+        return ownerKeys.IsComplete ? LegacyUserId : null;
+    }
+
+    private async Task<OwnerKeys> LoadOwnerKeysAsync()
+    {
+        var (users, isComplete) = await _apiAuthService.GetAllUsersWithCompletenessAsync();
+
+        var keysByHash = users.Select(user => user.ApiKey)
+            .Where(apiKey => string.IsNullOrWhiteSpace(apiKey) == false)
+            .Distinct()
+            .ToDictionary(HashApiKey, apiKey => apiKey, StringComparer.OrdinalIgnoreCase);
+
+        return new(keysByHash, isComplete);
+    }
+
+    private static string HashApiKey(string apiKey)
+    {
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(apiKey)));
+    }
+
+    private sealed record OwnerKeys(IReadOnlyDictionary<string, string> KeysByHash, bool IsComplete);
 }

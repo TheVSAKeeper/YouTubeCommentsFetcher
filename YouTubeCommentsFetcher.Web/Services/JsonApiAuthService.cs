@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using System.Text.Json;
 using YouTubeCommentsFetcher.Web.Configuration;
 using YouTubeCommentsFetcher.Web.Models;
@@ -20,6 +20,12 @@ public interface IApiAuthService
     /// </summary>
     /// <returns>Список всех пользователей</returns>
     Task<List<ApiUser>> GetAllUsersAsync();
+
+    /// <summary>
+    /// Получает всех пользователей и признак полноты списка
+    /// </summary>
+    /// <returns>Список всех пользователей (администратор из конфигурации – всегда) и true, если файл пользователей существует и прочитан</returns>
+    Task<(List<ApiUser> Users, bool IsComplete)> GetAllUsersWithCompletenessAsync();
 
     /// <summary>
     /// Создает нового пользователя
@@ -97,25 +103,13 @@ public class JsonApiAuthService(
 
     public async Task<List<ApiUser>> GetAllUsersAsync()
     {
-        var users = await LoadUsersAsync();
+        return AddAdminUser(await LoadUsersAsync());
+    }
 
-        var adminApiKey = adminOptions.Value.AdminApiKey;
-
-        if (string.IsNullOrWhiteSpace(adminApiKey) == false)
-        {
-            if (users.Any(u => u.ApiKey == adminApiKey) == false)
-            {
-                users.Add(new()
-                {
-                    ApiKey = adminApiKey,
-                    UserName = "Администратор",
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true,
-                });
-            }
-        }
-
-        return users;
+    public async Task<(List<ApiUser> Users, bool IsComplete)> GetAllUsersWithCompletenessAsync()
+    {
+        var (users, isComplete) = await ReadUsersFileAsync();
+        return (AddAdminUser(users), isComplete);
     }
 
     public async Task<ApiUser?> CreateUserAsync(string userName, string? customApiKey = null)
@@ -226,7 +220,34 @@ public class JsonApiAuthService(
         return isAdmin;
     }
 
+    private List<ApiUser> AddAdminUser(List<ApiUser> users)
+    {
+        var adminApiKey = adminOptions.Value.AdminApiKey;
+
+        if (string.IsNullOrWhiteSpace(adminApiKey) == false)
+        {
+            if (users.Any(u => u.ApiKey == adminApiKey) == false)
+            {
+                users.Add(new()
+                {
+                    ApiKey = adminApiKey,
+                    UserName = "Администратор",
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                });
+            }
+        }
+
+        return users;
+    }
+
     private async Task<List<ApiUser>> LoadUsersAsync()
+    {
+        var (users, _) = await ReadUsersFileAsync();
+        return users;
+    }
+
+    private async Task<(List<ApiUser> Users, bool IsComplete)> ReadUsersFileAsync()
     {
         await _fileLock.WaitAsync();
 
@@ -238,18 +259,18 @@ public class JsonApiAuthService(
             if (File.Exists(filePath) == false)
             {
                 logger.LogWarning("Файл пользователей не найден по пути: {FilePath}", filePath);
-                return [];
+                return ([], false);
             }
 
             var json = await File.ReadAllTextAsync(filePath);
             var usersData = JsonSerializer.Deserialize<UsersData>(json, JsonConfiguration.Export);
 
-            return usersData?.Users ?? [];
+            return usersData?.Users is { } users ? (users, true) : ([], false);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при загрузке пользователей из файла");
-            return [];
+            return ([], false);
         }
         finally
         {

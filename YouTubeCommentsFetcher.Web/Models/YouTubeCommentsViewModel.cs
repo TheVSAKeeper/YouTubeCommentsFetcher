@@ -6,4 +6,7 @@ public class YouTubeCommentsViewModel
     public List<Comment> Comments { get; set; } = [];
     public CommentStatistics? Statistics { get; set; }
     public bool IsIncomplete { get; set; }
+    public string? ChannelId { get; set; }
+    public string? ChannelName { get; set; }
+    public string? OwnerKeyHash { get; set; }
 }
