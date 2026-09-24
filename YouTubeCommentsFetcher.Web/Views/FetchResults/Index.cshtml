@@ -1,4 +1,4 @@
-@model FetchResultsIndexViewModel
+﻿@model FetchResultsIndexViewModel
 
 @{
     ViewData["Title"] = "Управление результатами выборки";
@@ -219,6 +219,11 @@
                                 </td>
                                 <td>
                                     <span class="badge bg-success">@result.TotalVideos</span>
+                                    @if (result.IsIncomplete)
+                                    {
+                                        <span class="badge bg-warning text-dark"
+                                              title="Сбор остановлен досрочно, собраны не все видео канала">неполный</span>
+                                    }
                                 </td>
                                 <td>
                                     <span class="badge bg-info">@result.UniqueAuthors</span>

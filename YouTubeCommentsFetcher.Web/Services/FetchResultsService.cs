@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.Json;
 using YouTubeCommentsFetcher.Web.Configuration;
 using YouTubeCommentsFetcher.Web.Models;
@@ -18,6 +18,7 @@ public interface IFetchResultsService
     /// <param name="model">Модель с данными комментариев</param>
     /// <param name="channelName">Название канала (опционально)</param>
     /// <param name="userId">Идентификатор пользователя (API ключ)</param>
+    /// <param name="isIncomplete">Сбор остановлен досрочно</param>
     /// <param name="cancellationToken">Токен отмены</param>
     /// <returns>Метаданные сохраненного результата</returns>
     Task<FetchResultMetadata> SaveFetchResultAsync(
@@ -26,6 +27,7 @@ public interface IFetchResultsService
         YouTubeCommentsViewModel model,
         string? channelName = null,
         string? userId = null,
+        bool isIncomplete = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -124,6 +126,7 @@ public class FetchResultsService : IFetchResultsService
         YouTubeCommentsViewModel model,
         string? channelName = null,
         string? userId = null,
+        bool isIncomplete = false,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jobId))
@@ -143,6 +146,7 @@ public class FetchResultsService : IFetchResultsService
 
         _logger.LogInformation("Сохранение результата выборки для задачи {JobId}", jobId);
 
+        model.IsIncomplete = isIncomplete;
         var json = JsonSerializer.Serialize(model, JsonConfiguration.Default);
         var filePath = _dataPathService.GetAbsoluteCommentsFilePath(jobId);
 
@@ -168,6 +172,7 @@ public class FetchResultsService : IFetchResultsService
                 .MaxBy(c => c.PublishedAt)
                 ?.PublishedAt,
             UserId = userId,
+            IsIncomplete = isIncomplete,
         };
 
         _metadataIndex.AddOrUpdate(jobId, metadata, (_, _) => metadata);
@@ -252,6 +257,7 @@ public class FetchResultsService : IFetchResultsService
                             .MaxBy(c => c.PublishedAt)
                             ?.PublishedAt,
                         UserId = "00000000-0000-0000-0000-000000000000", // Legacy user для существующих данных
+                        IsIncomplete = model.IsIncomplete,
                     };
 
                     _metadataIndex.TryAdd(jobId, metadata);
@@ -604,6 +610,7 @@ public class FetchResultsService : IFetchResultsService
                         .MaxBy(c => c.PublishedAt)
                         ?.PublishedAt,
                     UserId = "00000000-0000-0000-0000-000000000000", // Legacy user для существующих данных
+                    IsIncomplete = model.IsIncomplete,
                 };
 
                 _metadataIndex.TryAdd(jobId, metadata);

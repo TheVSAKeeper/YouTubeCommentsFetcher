@@ -1,4 +1,4 @@
-namespace YouTubeCommentsFetcher.Web.Models;
+﻿namespace YouTubeCommentsFetcher.Web.Models;
 
 /// <summary>
 /// Метаданные о результате выборки комментариев
@@ -64,6 +64,11 @@ public class FetchResultMetadata
     /// Идентификатор пользователя, создавшего результат (API ключ)
     /// </summary>
     public string? UserId { get; init; }
+
+    /// <summary>
+    /// Сбор остановлен досрочно, результат содержит не все видео канала
+    /// </summary>
+    public bool IsIncomplete { get; init; }
 }
 
 /// <summary>

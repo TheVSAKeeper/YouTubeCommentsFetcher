@@ -4,12 +4,12 @@ namespace YouTubeCommentsFetcher.Web.Services;
 
 public interface IJobStatusService
 {
-    void Init(string jobId);
-    void Init(string jobId, string? channelId);
-    void Init(string jobId, string? channelId, string? userId);
+    string StartOrGetRunning(string jobId, string channelId, string userId, int maxPages);
     void ReportProgress(string jobId, int percent);
     void MarkCompleted(string jobId);
-    JobStatus GetStatus(string jobId);
+    void MarkIncomplete(string jobId, string message);
+    void MarkFailed(string jobId, string message);
+    JobStatus? GetStatus(string jobId);
     Dictionary<string, JobStatus> GetAllActiveJobs();
     Dictionary<string, JobStatus> GetUserActiveJobs(string userId);
 }
@@ -17,20 +17,22 @@ public interface IJobStatusService
 public class InMemoryJobStatusService : IJobStatusService
 {
     private readonly ConcurrentDictionary<string, JobStatus> _statuses = new();
+    private readonly Lock _startLock = new();
 
-    public void Init(string jobId)
+    public string StartOrGetRunning(string jobId, string channelId, string userId, int maxPages)
     {
-        _statuses[jobId] = new(0, false);
-    }
+        lock (_startLock)
+        {
+            var running = _statuses.FirstOrDefault(kvp => kvp.Value.IsActive && kvp.Value.ChannelId == channelId);
 
-    public void Init(string jobId, string? channelId)
-    {
-        _statuses[jobId] = new(0, false, DateTime.UtcNow, channelId);
-    }
+            if (running.Key != null)
+            {
+                return running.Key;
+            }
 
-    public void Init(string jobId, string? channelId, string? userId)
-    {
-        _statuses[jobId] = new(0, false, DateTime.UtcNow, channelId, userId);
+            _statuses[jobId] = new(0, false, DateTime.UtcNow, channelId, userId) { MaxPages = maxPages };
+            return jobId;
+        }
     }
 
     public void ReportProgress(string jobId, int percent)
@@ -44,20 +46,34 @@ public class InMemoryJobStatusService : IJobStatusService
     {
         _statuses.AddOrUpdate(jobId,
             new JobStatus(100, true),
-            (_, _) => new(100, true));
+            (_, old) => old with { Progress = 100, Completed = true });
     }
 
-    public JobStatus GetStatus(string jobId)
+    public void MarkIncomplete(string jobId, string message)
+    {
+        _statuses.AddOrUpdate(jobId,
+            new JobStatus(100, true) { Incomplete = true, Message = message },
+            (_, old) => old with { Progress = 100, Completed = true, Incomplete = true, Message = message });
+    }
+
+    public void MarkFailed(string jobId, string message)
+    {
+        _statuses.AddOrUpdate(jobId,
+            new JobStatus(0, false) { Failed = true, Message = message },
+            (_, old) => old with { Failed = true, Message = message });
+    }
+
+    public JobStatus? GetStatus(string jobId)
     {
         return _statuses.TryGetValue(jobId, out var status)
             ? status
-            : new(0, false);
+            : null;
     }
 
     public Dictionary<string, JobStatus> GetAllActiveJobs()
     {
         return _statuses
-            .Where(kvp => kvp.Value.Completed == false)
+            .Where(kvp => kvp.Value.IsActive)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
@@ -69,7 +85,7 @@ public class InMemoryJobStatusService : IJobStatusService
         }
 
         return _statuses
-            .Where(kvp => kvp.Value.Completed == false && kvp.Value.UserId == userId)
+            .Where(kvp => kvp.Value.IsActive && kvp.Value.UserId == userId)
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 }

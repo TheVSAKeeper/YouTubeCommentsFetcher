@@ -3,6 +3,10 @@
     ViewData["Title"] = "Обработка запроса";
 }
 <h2>Запрос поставлен в очередь</h2>
+@if (TempData["Warning"] != null)
+{
+    <div class="alert alert-warning" role="alert">@TempData["Warning"]</div>
+}
 <p>Идентификатор задачи: <strong>@Model.JobId</strong></p>
 <div style="margin-top:20px;">
     <label for="progress">Прогресс:</label>
@@ -17,14 +21,32 @@
     </div>
 </div>
 
-<p id="statusText">Ожидание завершения фоновой задачи...</p>
+<p id="statusText" aria-live="polite">Ожидание завершения фоновой задачи...</p>
+
+<div id="statusAlert" class="alert d-none" role="alert"></div>
+
+<a id="openResult"
+   class="btn btn-primary d-none"
+   href="@Url.Action("LoadData", "Home", new { jobId = Model.JobId })">
+    Открыть собранные комментарии
+</a>
 
 <script>
     const jobId = '@Model.JobId';
     const jsonUrl = '@Model.DataFileUrl';
     const progressBar = document.getElementById("progress");
     const progressText = document.getElementById("progress-text");
+    const statusText = document.getElementById("statusText");
+    const statusAlert = document.getElementById("statusAlert");
+    const openResult = document.getElementById("openResult");
     const statusUrl = `/Home/GetJobStatus?jobId=${jobId}`;
+
+    function showFinalState(alertClass, title, message) {
+        statusText.textContent = title;
+        statusAlert.textContent = message;
+        statusAlert.classList.remove("d-none");
+        statusAlert.classList.add(alertClass);
+    }
 
     async function update() {
         try {
@@ -34,7 +56,12 @@
             progressBar.value = status.progress;
             progressText.innerText = `${status.progress}%`;
 
-            if (status.completed) {
+            if (status.failed) {
+                showFinalState("alert-danger", "Сбор не удался.", status.message);
+            } else if (status.completed && status.incomplete) {
+                showFinalState("alert-warning", "Сбор остановлен досрочно.", status.message);
+                openResult.classList.remove("d-none");
+            } else if (status.completed) {
                 const blob = await fetch(jsonUrl).then(x => x.blob());
                 const file = new File([blob], '@Model.FileName', { type: 'application/json' });
                 const formData = new FormData();

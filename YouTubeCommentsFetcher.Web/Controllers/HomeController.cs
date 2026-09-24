@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Quartz;
 using System.Diagnostics;
@@ -18,6 +18,8 @@ public class HomeController(
     IFetchResultsService fetchResultsService,
     ILogger<HomeController> logger) : Controller
 {
+    private const int MaxPlaylistPages = 100;
+
     public IActionResult Index()
     {
         return View();
@@ -25,8 +27,10 @@ public class HomeController(
 
     [HttpPost]
     [Authorize]
-    public async Task<IActionResult> FetchCommentsBackground(string channelId, int pageSize = 5, int maxPages = 1)
+    public async Task<IActionResult> FetchCommentsBackground(string channelId, int maxPages = 1)
     {
+        channelId = channelId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrEmpty(channelId))
         {
             TempData["Error"] = "Invalid channel ID.";
@@ -41,26 +45,59 @@ public class HomeController(
             return RedirectToAction("Index");
         }
 
+        maxPages = Math.Clamp(maxPages, 1, MaxPlaylistPages);
+
         var jobId = Guid.NewGuid().ToString();
-        statusService.Init(jobId, channelId, userId);
+        var runningJobId = statusService.StartOrGetRunning(jobId, channelId, userId, maxPages);
 
-        var scheduler = await schedulerFactory.GetScheduler();
+        if (runningJobId != jobId)
+        {
+            var runningJob = statusService.GetStatus(runningJobId);
 
-        var job = JobBuilder.Create<FetchCommentsJob>()
-            .WithIdentity($"job_{jobId}")
-            .UsingJobData("jobId", jobId)
-            .UsingJobData("channelId", channelId)
-            .UsingJobData("pageSize", pageSize)
-            .UsingJobData("maxPages", maxPages)
-            .UsingJobData("userId", userId)
-            .Build();
+            if (runningJob?.UserId == userId || User.HasClaim("IsAdmin", "true"))
+            {
+                logger.LogInformation("Канал {ChannelId} уже собирается задачей {JobId}, новая задача не создана", channelId, runningJobId);
 
-        var trigger = TriggerBuilder.Create()
-            .WithIdentity($"trigger_{jobId}")
-            .StartNow()
-            .Build();
+                if (runningJob != null && runningJob.MaxPages != maxPages)
+                {
+                    TempData["Warning"] = $"Этот канал уже собирается, но с другим числом страниц: {runningJob.MaxPages} вместо {maxPages}. "
+                                          + "Новый сбор не запущен, ниже – ход текущего. Чтобы собрать с другим числом страниц, запустите сбор ещё раз, когда этот закончится.";
+                }
 
-        await scheduler.ScheduleJob(job, trigger);
+                return RedirectToAction("JobQueued", new { jobId = runningJobId });
+            }
+
+            TempData["Error"] = "Этот канал сейчас уже собирается по запросу другого пользователя. Запустите сбор, когда он закончится.";
+            return RedirectToAction("Index");
+        }
+
+        try
+        {
+            var scheduler = await schedulerFactory.GetScheduler();
+
+            var job = JobBuilder.Create<FetchCommentsJob>()
+                .WithIdentity($"job_{jobId}")
+                .UsingJobData("jobId", jobId)
+                .UsingJobData("channelId", channelId)
+                .UsingJobData("maxPages", maxPages)
+                .UsingJobData("userId", userId)
+                .Build();
+
+            var trigger = TriggerBuilder.Create()
+                .WithIdentity($"trigger_{jobId}")
+                .StartNow()
+                .Build();
+
+            await scheduler.ScheduleJob(job, trigger);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Не удалось поставить задачу {JobId} в очередь", jobId);
+            statusService.MarkFailed(jobId, "Не удалось запустить сбор. Попробуйте ещё раз.");
+            TempData["Error"] = "Не удалось запустить сбор. Попробуйте ещё раз.";
+            return RedirectToAction("Index");
+        }
+
         return RedirectToAction("JobQueued", new { jobId });
     }
 
@@ -83,10 +120,35 @@ public class HomeController(
     }
 
     [HttpGet]
-    public IActionResult GetJobStatus(string jobId)
+    public async Task<IActionResult> GetJobStatus(string jobId)
     {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var isAdmin = User.HasClaim("IsAdmin", "true");
+        bool CanView(string? ownerId) => isAdmin || (string.IsNullOrEmpty(userId) == false && ownerId == userId);
+
         var status = statusService.GetStatus(jobId);
-        return Ok(status);
+
+        if (status != null && CanView(status.UserId))
+        {
+            return Ok(status);
+        }
+
+        var metadata = await fetchResultsService.GetMetadataAsync(jobId);
+
+        if (metadata != null && CanView(metadata.UserId))
+        {
+            return Ok(new JobStatus(100, true)
+            {
+                Incomplete = metadata.IsIncomplete,
+                Message = metadata.IsIncomplete ? "Неполный результат: сбор был остановлен досрочно. Всё, что успели собрать, сохранено." : null,
+            });
+        }
+
+        return Ok(new JobStatus(0, false)
+        {
+            Failed = true,
+            Message = "Задача не найдена. Возможно, сервер перезапускался во время сбора – запустите сбор ещё раз.",
+        });
     }
 
     public IActionResult Privacy()
